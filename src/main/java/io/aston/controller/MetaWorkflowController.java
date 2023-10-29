@@ -2,8 +2,10 @@ package io.aston.controller;
 
 import io.aston.api.MetaWorkflowApi;
 import io.aston.dao.IMetaDao;
-import io.aston.entity.WorkflowDefEntity;
-import io.aston.model.WorkflowDef;
+import io.aston.entity.MetaTemplateEntity;
+import io.aston.model.TaskDef;
+import io.aston.model.WorkflowTemplate;
+import io.aston.service.MetaCacheService;
 import io.aston.user.UserDataException;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Controller;
@@ -15,14 +17,16 @@ import java.util.List;
 public class MetaWorkflowController implements MetaWorkflowApi {
 
     private final IMetaDao metaDao;
+    private final MetaCacheService metaCacheService;
 
-    public MetaWorkflowController(IMetaDao metaDao) {
+    public MetaWorkflowController(IMetaDao metaDao, MetaCacheService metaCacheService) {
         this.metaDao = metaDao;
+        this.metaCacheService = metaCacheService;
     }
 
     @Override
-    public WorkflowDef create(WorkflowDef workflowDef) {
-        WorkflowDefEntity last = metaDao.searchLatestByName(workflowDef.getName()).orElse(null);
+    public WorkflowTemplate create(WorkflowTemplate workflowDef) {
+        MetaTemplateEntity last = metaDao.searchLatestByName(workflowDef.getName()).orElse(null);
         String name = workflowDef.getName() + "/1";
         if (last != null) {
             int lastVersion = Integer.parseInt(last.getName().split("/")[1]);
@@ -31,7 +35,7 @@ public class MetaWorkflowController implements MetaWorkflowApi {
             last.getData().setLatest(false);
             metaDao.update(last);
         }
-        WorkflowDefEntity workflowDefEntity = new WorkflowDefEntity();
+        MetaTemplateEntity workflowDefEntity = new MetaTemplateEntity();
         workflowDefEntity.setName(name);
         workflowDefEntity.setLatest(true);
         workflowDefEntity.setCreated(Instant.now());
@@ -44,20 +48,25 @@ public class MetaWorkflowController implements MetaWorkflowApi {
     }
 
     @Override
-    public List<WorkflowDef> search(@Nullable Boolean latest, @Nullable String name) {
+    public List<WorkflowTemplate> search(@Nullable Boolean latest, @Nullable String name) {
         return metaDao.search(latest, name)
-                .stream().map(WorkflowDefEntity::getData).toList();
+                .stream().map(MetaTemplateEntity::getData).toList();
     }
 
     @Override
-    public WorkflowDef fetch(String name) {
+    public WorkflowTemplate fetch(String name) {
         return metaDao.searchLatestByName(name)
-                .map(WorkflowDefEntity::getData)
+                .map(MetaTemplateEntity::getData)
                 .orElseThrow(() -> new UserDataException("not found"));
     }
 
     @Override
-    public WorkflowDef delete(String name) {
+    public WorkflowTemplate delete(String name) {
         throw new UserDataException("not supported");
+    }
+
+    @Override
+    public List<TaskDef> fetchWorkflowTasks(String id) {
+        return metaCacheService.workflowTasks(id);
     }
 }

@@ -79,4 +79,13 @@ public interface ITaskDao {
                              Multi<String> workflowNames,
                              Instant dateFrom,
                              Instant dateTo);
+
+    @Query("""
+            select *
+            from ns_task
+            where workflowId=:workflowId
+            and output is not null
+            order by created
+            """)
+    List<TaskEntity> searchWorkflowScopeTasks(String workflowId);
 }

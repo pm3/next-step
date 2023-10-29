@@ -3,17 +3,17 @@ package io.aston.entity;
 import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.entity.Table;
-import io.aston.model.WorkflowDef;
+import io.aston.model.WorkflowTemplate;
 
 import java.time.Instant;
 
-@Table(name = "ns_workflow_def", id = "name")
-public class WorkflowDefEntity {
+@Table(name = "ns_meta_template", id = "name")
+public class MetaTemplateEntity {
     private String name;
     private boolean latest;
     private Instant created;
     @Format(JsonConverterFactory.JSON)
-    private WorkflowDef data;
+    private WorkflowTemplate data;
 
     public String getName() {
         return name;
@@ -22,7 +22,7 @@ public class WorkflowDefEntity {
     public void setName(String name) {
         this.name = name;
     }
-    
+
     public boolean isLatest() {
         return latest;
     }
@@ -39,11 +39,11 @@ public class WorkflowDefEntity {
         this.created = created;
     }
 
-    public WorkflowDef getData() {
+    public WorkflowTemplate getData() {
         return data;
     }
 
-    public void setData(WorkflowDef data) {
+    public void setData(WorkflowTemplate data) {
         this.data = data;
     }
 }

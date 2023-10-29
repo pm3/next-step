@@ -9,7 +9,7 @@ import java.util.List;
 @Introspected
 @Serdeable.Deserializable
 @Serdeable.Serializable
-public class WorkflowDef {
+public class WorkflowTemplate {
     private Instant created;
     private String name;
     private String description;

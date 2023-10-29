@@ -16,7 +16,6 @@ import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Controller;
 
 import java.time.Instant;
-import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -58,20 +57,7 @@ public class RuntimeController implements RuntimeApi {
         task.setState(taskOutput.getState());
         task.setModified(Instant.now());
         taskDao.updateState(task);
-        if (taskOutput.getState() == State.COMPLETED && task.getOutput() != null && task.getOutputVar() != null) {
-            mergeWorkflowContext(task, workflow);
-            workflow = workflowDao.loadById(workflow.getId()).orElseThrow(() -> new UserDataException("reload workflow error"));
-        }
         nextStepService.nextStep(workflow, task);
         return nextStepService.toTask(task);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void mergeWorkflowContext(TaskEntity task, WorkflowEntity workflow) {
-        if (task.getOutputVar().equals("$.") && task.getOutput() instanceof Map) {
-            workflowDao.updateScope(workflow.getId(), (Map<String, Object>) task.getOutput());
-        } else {
-            workflowDao.updateScope(workflow.getId(), Map.of(task.getOutputVar(), task.getOutput()));
-        }
     }
 }

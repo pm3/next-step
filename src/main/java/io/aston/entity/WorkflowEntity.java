@@ -4,7 +4,6 @@ import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.entity.Table;
 import io.aston.model.State;
-import io.aston.model.TaskDef;
 import io.micronaut.core.annotation.Nullable;
 
 import java.time.Instant;
@@ -22,12 +21,6 @@ public class WorkflowEntity {
     @Nullable
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
-    @Nullable
-    @Format(JsonConverterFactory.JSON)
-    private Map<String, Object> scope;
-    @Nullable
-    @Format(JsonConverterFactory.JSON)
-    private Map<Integer, TaskDef> defTasks;
 
     public String getId() {
         return id;
@@ -83,21 +76,5 @@ public class WorkflowEntity {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
-    }
-
-    public Map<String, Object> getScope() {
-        return scope;
-    }
-
-    public void setScope(Map<String, Object> scope) {
-        this.scope = scope;
-    }
-
-    public Map<Integer, TaskDef> getDefTasks() {
-        return defTasks;
-    }
-
-    public void setDefTasks(Map<Integer, TaskDef> defTasks) {
-        this.defTasks = defTasks;
     }
 }

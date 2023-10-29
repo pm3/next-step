@@ -14,6 +14,7 @@ import java.util.Map;
 public class Task {
     private String id;
     private String workflowId;
+    private int ref;
     private String taskName;
     private String workflowName;
     @Format(JsonConverterFactory.JSON)
@@ -24,8 +25,6 @@ public class Task {
     private Instant created;
     private Instant modified;
     private int retries;
-    @Format(JsonConverterFactory.JSON)
-    private TaskDef taskDef;
 
     public String getId() {
         return id;
@@ -41,6 +40,14 @@ public class Task {
 
     public void setWorkflowId(String workflowId) {
         this.workflowId = workflowId;
+    }
+
+    public int getRef() {
+        return ref;
+    }
+
+    public void setRef(int ref) {
+        this.ref = ref;
     }
 
     public String getTaskName() {
@@ -105,13 +112,5 @@ public class Task {
 
     public void setRetries(int retries) {
         this.retries = retries;
-    }
-
-    public TaskDef getTaskDef() {
-        return taskDef;
-    }
-
-    public void setTaskDef(TaskDef taskDef) {
-        this.taskDef = taskDef;
     }
 }

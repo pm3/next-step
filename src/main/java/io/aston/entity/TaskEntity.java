@@ -4,7 +4,6 @@ import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.entity.Table;
 import io.aston.model.State;
-import io.aston.model.TaskDef;
 import io.micronaut.core.annotation.Nullable;
 
 import java.time.Instant;
@@ -15,8 +14,6 @@ public class TaskEntity {
     private String id;
     private String workflowId;
     private int ref;
-    @Nullable
-    private String outputVar;
     private String taskName;
     private String workflowName;
     @Nullable
@@ -30,8 +27,6 @@ public class TaskEntity {
     @Nullable
     private Instant modified;
     private int retries;
-    @Format(JsonConverterFactory.JSON)
-    private TaskDef taskDef;
 
     public String getId() {
         return id;
@@ -55,14 +50,6 @@ public class TaskEntity {
 
     public void setRef(int ref) {
         this.ref = ref;
-    }
-
-    public String getOutputVar() {
-        return outputVar;
-    }
-
-    public void setOutputVar(String outputVar) {
-        this.outputVar = outputVar;
     }
 
     public String getTaskName() {
@@ -127,13 +114,5 @@ public class TaskEntity {
 
     public void setRetries(int retries) {
         this.retries = retries;
-    }
-
-    public TaskDef getTaskDef() {
-        return taskDef;
-    }
-
-    public void setTaskDef(TaskDef taskDef) {
-        this.taskDef = taskDef;
     }
 }

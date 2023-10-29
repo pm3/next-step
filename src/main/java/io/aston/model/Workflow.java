@@ -22,8 +22,6 @@ public class Workflow {
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
     @Format(JsonConverterFactory.JSON)
-    private Map<String, Object> scope;
-    @Format(JsonConverterFactory.JSON)
     private List<Task> tasks;
 
     public String getId() {
@@ -81,15 +79,7 @@ public class Workflow {
     public void setParams(Map<String, Object> params) {
         this.params = params;
     }
-
-    public Map<String, Object> getScope() {
-        return scope;
-    }
-
-    public void setScope(Map<String, Object> scope) {
-        this.scope = scope;
-    }
-
+    
     public List<Task> getTasks() {
         return tasks;
     }
