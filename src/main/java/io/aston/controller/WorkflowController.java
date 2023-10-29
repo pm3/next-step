@@ -40,7 +40,7 @@ public class WorkflowController implements WorkflowApi {
 
         Instant now = Instant.now();
         if (workflowCreate.getTasks() == null || workflowCreate.getTasks().isEmpty()) {
-            WorkflowDefEntity def = null;
+            WorkflowDefEntity def;
             if (workflowCreate.getName().contains("/")) {
                 def = metaDao.loadById(workflowCreate.getName())
                         .orElseThrow(() -> new UserDataException("invalid workflow name"));

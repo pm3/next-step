@@ -36,7 +36,7 @@ public interface IWorkflowDao {
             params = params::jsonb || :data::jsonb
             where id=:id
             """)
-    int updateParams(String id, @Format(JsonConverterFactory.JSON) Map<String, Object> data);
+    void updateParams(String id, @Format(JsonConverterFactory.JSON) Map<String, Object> data);
 
     @Query("select * from ns_workflow where id=:id")
     Optional<Workflow> selectById(String id);

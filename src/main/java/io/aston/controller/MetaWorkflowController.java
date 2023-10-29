@@ -24,7 +24,7 @@ public class MetaWorkflowController implements MetaWorkflowApi {
         WorkflowDefEntity last = metaDao.searchLatestByName(workflowDef.getName()).orElse(null);
         String name = workflowDef.getName() + "/1";
         if (last != null) {
-            int lastVersion = Integer.parseInt(last.getName().split("\\/")[1]);
+            int lastVersion = Integer.parseInt(last.getName().split("/")[1]);
             name = workflowDef.getName() + "/" + (lastVersion + 1);
             last.setLatest(false);
             last.getData().setLatest(false);
