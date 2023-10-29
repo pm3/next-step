@@ -82,7 +82,7 @@ public class AddWorkflow {
         if (taskJson != null && taskJson.startsWith("{")) {
             System.out.println("queue task " + i + " --- " + (System.currentTimeMillis() - t1));
             System.out.println(taskJson);
-            if (i == 1) return;
+            //if (i == 1) return;
             Task task = add.objectMapper.readValue(taskJson, Task.class);
             TaskOutput output = new TaskOutput();
             output.setTaskId(task.getId());

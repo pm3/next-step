@@ -195,14 +195,14 @@ public class NextStepService {
 
     public Map<String, Object> computeParams(Map<String, Object> paramsDef, WorkflowEntity workflow) {
         Map<String, Object> params = new HashMap<>();
-        if (needScope(params)) {
-            Map<String, Object> scope = new HashMap<>();
+        if (needScope(paramsDef)) {
+            Map<String, Object> scope = new HashMap<>(workflow.getParams());
             List<TaskEntity> tasks = taskDao.searchWorkflowScopeTasks(workflow.getId());
             for (TaskEntity task : tasks) {
                 TaskDef def = metaCacheService.workflowTask(workflow.getId(), task.getRef());
                 if (def != null && def.getOutputVar() != null) {
                     if (def.getOutputVar().equals("$.") && task.getOutput() instanceof Map) {
-
+                        scope.putAll((Map<String, Object>) task.getOutput());
                     } else {
                         scope.put(def.getOutputVar(), task.getOutput());
                     }
@@ -216,12 +216,14 @@ public class NextStepService {
                     params.put(e.getKey(), e.getValue());
                 }
             }
+        } else {
+            params.putAll(paramsDef);
         }
         return params;
     }
 
-    private boolean needScope(Map<String, Object> params) {
-        for (Map.Entry<String, Object> e : params.entrySet()) {
+    private boolean needScope(Map<String, Object> paramsDef) {
+        for (Map.Entry<String, Object> e : paramsDef.entrySet()) {
             if (e.getValue() instanceof String sval && sval.startsWith("${") && sval.endsWith("}")) {
                 return true;
             }

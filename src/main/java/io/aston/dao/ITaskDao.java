@@ -84,6 +84,7 @@ public interface ITaskDao {
             select *
             from ns_task
             where workflowId=:workflowId
+            and state='COMPLETED'
             and output is not null
             order by created
             """)
