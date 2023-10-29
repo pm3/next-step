@@ -198,8 +198,9 @@ public class NextStepService {
         if (needScope(paramsDef)) {
             Map<String, Object> scope = new HashMap<>(workflow.getParams());
             List<TaskEntity> tasks = taskDao.searchWorkflowScopeTasks(workflow.getId());
+            Map<Integer, TaskDef> defMap = metaCacheService.workflowTaskMap(workflow.getId());
             for (TaskEntity task : tasks) {
-                TaskDef def = metaCacheService.workflowTask(workflow.getId(), task.getRef());
+                TaskDef def = defMap.get(task.getRef());
                 if (def != null && def.getOutputVar() != null) {
                     if (def.getOutputVar().equals("$.") && task.getOutput() instanceof Map) {
                         scope.putAll((Map<String, Object>) task.getOutput());

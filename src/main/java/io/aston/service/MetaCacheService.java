@@ -7,6 +7,7 @@ import io.aston.model.TaskDef;
 import jakarta.inject.Singleton;
 
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,6 +50,15 @@ public class MetaCacheService {
             }
         }
         return null;
+    }
+
+    public Map<Integer, TaskDef> workflowTaskMap(String workflowId) {
+        Map<Integer, TaskDef> defMap = new HashMap<>();
+        List<TaskDef> l = workflowTasks(workflowId);
+        if (l != null) {
+            for (TaskDef def : l) defMap.put(def.getRef(), def);
+        }
+        return defMap;
     }
 
     public void saveWorkflowTasks(String workflowId, List<TaskDef> tasks) {
