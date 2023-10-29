@@ -6,5 +6,4 @@ public enum State {
     COMPLETED,
     FAILED,
     FATAL_ERROR,
-    TIMEOUT
 }

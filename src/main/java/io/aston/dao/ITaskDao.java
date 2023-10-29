@@ -2,6 +2,8 @@ package io.aston.dao;
 
 import com.aston.micronaut.sql.aop.Query;
 import com.aston.micronaut.sql.aop.SqlApi;
+import com.aston.micronaut.sql.convert.JsonConverterFactory;
+import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.where.Multi;
 import io.aston.entity.TaskEntity;
 import io.aston.model.State;
@@ -20,24 +22,38 @@ public interface ITaskDao {
     Optional<TaskEntity> loadById(String id);
 
     @Query("select * from ns_task where id=:id")
-    Optional<Task> selectById(String id);
+    Optional<Task> loadTaskById(String id);
 
     @Query("""
             update ns_task set
             state=:state,
             output=:output,
-            finished=:finished,
-            retries=:retries
+            retries=:retries,
+            modified=:modified
             where id=:id
             """)
-    int updateState(TaskEntity task);
+    void updateState(TaskEntity task);
 
     @Query("""
             update ns_task set
-            state=:state
-            where id=:id
+            state=:newState,
+            modified=:modified
+            where id=:id and state=:oldState
             """)
-    void updateState(String id, State state);
+    int updateState(String id, State oldState, State newState, Instant modified);
+
+    @Query("""
+            update ns_task set
+            state=:newState,
+            output=:output,
+            modified=:modified
+            where workflowId=:workflowId and state in(:oldStates)
+            """)
+    void updateWorkflowAll(String workflowId,
+                           Multi<State> oldStates,
+                           State newState,
+                           @Format(JsonConverterFactory.JSON) Object output,
+                           Instant modified);
 
     @Query("""
             select *

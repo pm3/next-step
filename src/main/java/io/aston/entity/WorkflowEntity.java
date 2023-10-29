@@ -8,7 +8,6 @@ import io.aston.model.TaskDef;
 import io.micronaut.core.annotation.Nullable;
 
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 
 @Table(name = "ns_workflow")
@@ -18,14 +17,17 @@ public class WorkflowEntity {
     private String workflowName;
     private Instant created;
     @Nullable
-    private Instant finished;
+    private Instant modified;
     private State state;
     @Nullable
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
     @Nullable
     @Format(JsonConverterFactory.JSON)
-    private List<TaskDef> defTasks;
+    private Map<String, Object> scope;
+    @Nullable
+    @Format(JsonConverterFactory.JSON)
+    private Map<Integer, TaskDef> defTasks;
 
     public String getId() {
         return id;
@@ -59,12 +61,12 @@ public class WorkflowEntity {
         this.created = created;
     }
 
-    public Instant getFinished() {
-        return finished;
+    public Instant getModified() {
+        return modified;
     }
 
-    public void setFinished(Instant finished) {
-        this.finished = finished;
+    public void setModified(Instant modified) {
+        this.modified = modified;
     }
 
     public State getState() {
@@ -83,11 +85,19 @@ public class WorkflowEntity {
         this.params = params;
     }
 
-    public List<TaskDef> getDefTasks() {
+    public Map<String, Object> getScope() {
+        return scope;
+    }
+
+    public void setScope(Map<String, Object> scope) {
+        this.scope = scope;
+    }
+
+    public Map<Integer, TaskDef> getDefTasks() {
         return defTasks;
     }
 
-    public void setDefTasks(List<TaskDef> defTasks) {
+    public void setDefTasks(Map<Integer, TaskDef> defTasks) {
         this.defTasks = defTasks;
     }
 }

@@ -17,10 +17,12 @@ public class Workflow {
     private String uniqueCode;
     private String workflowName;
     private Instant created;
-    private Instant finished;
+    private Instant modified;
     private State state;
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
+    @Format(JsonConverterFactory.JSON)
+    private Map<String, Object> scope;
     @Format(JsonConverterFactory.JSON)
     private List<Task> tasks;
 
@@ -56,12 +58,12 @@ public class Workflow {
         this.created = created;
     }
 
-    public Instant getFinished() {
-        return finished;
+    public Instant getModified() {
+        return modified;
     }
 
-    public void setFinished(Instant finished) {
-        this.finished = finished;
+    public void setModified(Instant modified) {
+        this.modified = modified;
     }
 
     public State getState() {
@@ -78,6 +80,14 @@ public class Workflow {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
+    }
+
+    public Map<String, Object> getScope() {
+        return scope;
+    }
+
+    public void setScope(Map<String, Object> scope) {
+        this.scope = scope;
     }
 
     public List<Task> getTasks() {

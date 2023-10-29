@@ -1,7 +1,6 @@
 package io.aston.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aston.model.State;
 import io.aston.model.Task;
 import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.http.HttpResponse;
@@ -14,11 +13,12 @@ import org.slf4j.LoggerFactory;
 import java.util.Date;
 import java.util.Optional;
 import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Singleton
 public class TaskQueue implements ApplicationEventListener<HttpRequestTerminatedEvent> {
@@ -28,7 +28,7 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
     private final ConcurrentHashMap<String, BlockingQueue<Task>> taskQueueMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, BlockingQueue<Worker>> workerQueueMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Worker> workerMap = new ConcurrentHashMap<>();
-    private Consumer<Task> changeTaskState = null;
+    private Function<Task, Boolean> nextStepRunning = null;
     private static final Logger logger = LoggerFactory.getLogger(TaskQueue.class);
 
     public TaskQueue(ObjectMapper objectMapper) {
@@ -36,8 +36,8 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
         this.objectMapper = objectMapper;
     }
 
-    public void setChangeTaskState(Consumer<Task> changeTaskState) {
-        this.changeTaskState = changeTaskState;
+    public void setNextStepRunning(Function<Task, Boolean> nextStepRunning) {
+        this.nextStepRunning = nextStepRunning;
     }
 
     public void addTask(Task task) {
@@ -67,6 +67,25 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
             timeoutWorkerResponse(worker, timeout);
             workerQueue.add(worker);
         }
+    }
+
+    public void schedule(Date time, Runnable r) {
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    r.run();
+                } catch (Throwable thr) {
+                    String m = thr.getMessage();
+                    try {
+                        StackTraceElement[] arr = thr.getStackTrace();
+                        if (arr != null && arr.length > 0) m = m + " " + arr[0].toString();
+                    } catch (Exception ignore) {
+                    }
+                    logger.warn("timer task error " + m);
+                }
+            }
+        }, time);
     }
 
     private BlockingQueue<Task> taskQueue(String taskName) {
@@ -99,24 +118,25 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
     }
 
     public void sendTask(CompletableFuture<HttpResponse<Task>> future, Task task) {
+        if (task != null && nextStepRunning != null) {
+            if (!nextStepRunning.apply(task)) {
+                task = null;
+            }
+        }
         if (task != null) {
-            task.setState(State.RUNNING);
             logger.debug("task sent to worker {}", toJson(task));
             future.complete(HttpResponse.ok(task));
-            if (changeTaskState != null) {
-                changeTaskState.accept(task);
-            }
         } else {
             future.complete(HttpResponse.status(HttpStatus.NO_CONTENT));
         }
     }
 
     private void timeoutWorkerResponse(Worker worker, long timeout) {
-        RunTimerTask.schedule(timer, () -> {
+        schedule(new Date(System.currentTimeMillis() + timeout), () -> {
             workerMap.remove(worker.getWid());
             CompletableFuture<HttpResponse<Task>> future = worker.removeFuture();
             if (future != null) sendTask(future, null);
-        }, new Date(System.currentTimeMillis() + timeout));
+        });
     }
 
     @Override

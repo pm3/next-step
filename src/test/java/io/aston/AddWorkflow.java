@@ -21,8 +21,21 @@ public class AddWorkflow {
     public static void main(String[] args) {
         try {
             AddWorkflow add = new AddWorkflow();
+
+//            add.workflowCreate();
+//            System.out.println(add.post("http://localhost:8080/v1/meta/workflows/", add.workflowCreate()));
+//            System.out.println(add.post("http://localhost:8080/v1/meta/workflows/", add.workflowCreate()));
+//            System.out.println(add.post("http://localhost:8080/v1/meta/workflows/", add.workflowCreate()));
+//            System.out.println(add.get("http://localhost:8080/v1/meta/workflows/?latest=true"));
+//
+//            WorkflowCreate def1 = new WorkflowCreate();
+//            def1.setName("test");
+//            def1.setUniqueCode("a" + System.currentTimeMillis());
+//            String workflowJson0 = add.post("http://localhost:8080/v1/workflows/", def1);
+//            System.out.println(workflowJson0);
+
             Workflow workflow = null;
-            for (int i = 0; i < 2000; i++) {
+            for (int i = 0; i < 1; i++) {
                 String workflowJson = add.post("http://localhost:8080/v1/workflows/", add.workflowCreate());
                 System.out.println("create workflow " + i);
                 System.out.println(workflowJson);
@@ -35,16 +48,17 @@ public class AddWorkflow {
 
             long t1 = System.currentTimeMillis();
             AtomicInteger total = new AtomicInteger();
-            for (int k = 0; k < 10; k++) {
-                new Thread(() -> {
-                    for (int i = 0; i < 10000; i++) {
-                        try {
-                            workeer(add, t1, total.incrementAndGet());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }).start();
+//            for (int k = 0; k < 1; k++) {
+//                new Thread(() -> {
+//                }).start();
+//            }
+
+            for (int i = 0; i < 50; i++) {
+                try {
+                    workeer(add, t1, total.incrementAndGet());
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
             String w1Out = add.get("http://localhost:8080/v1/workflows/" + workflow.getId() + "?includeTasks=true");
@@ -64,10 +78,11 @@ public class AddWorkflow {
     private static void workeer(AddWorkflow add, long t1, int i) throws Exception {
         System.out.println("test queue " + i);
 
-        String taskJson = add.get("http://localhost:8080/v1/runtime/queues?taskName=echo&workerId=local&timeout=30");
+        String taskJson = add.get("http://localhost:8080/v1/runtime/queues?taskName=echo&workerId=local&timeout=1");
         if (taskJson != null && taskJson.startsWith("{")) {
             System.out.println("queue task " + i + " --- " + (System.currentTimeMillis() - t1));
             System.out.println(taskJson);
+            if (i == 1) return;
             Task task = add.objectMapper.readValue(taskJson, Task.class);
             TaskOutput output = new TaskOutput();
             output.setTaskId(task.getId());
@@ -81,14 +96,14 @@ public class AddWorkflow {
                 }
             }
             output.setState(State.COMPLETED);
-            if (task.getRetries() < 2) {
-                output.setOutput(null);
-                output.setState(State.FAILED);
-            }
+//            if (task.getRetries() < 1) {
+//                output.setOutput(null);
+//                output.setState(State.FAILED);
+//            }
             String respOut = add.put("http://localhost:8080/v1/runtime/tasks/" + task.getId(), output);
-            System.out.println("queue task save " + i);
-            System.out.println(add.objectMapper.writeValueAsString(output));
-            System.out.println(respOut);
+            //System.out.println("queue task save " + i);
+            //System.out.println(add.objectMapper.writeValueAsString(output));
+            //System.out.println(respOut);
         }
     }
 
@@ -168,9 +183,9 @@ public class AddWorkflow {
         def.getParams().put("a", "${a}");
         def.getParams().put("b", "${b}");
         def.setOutputVar("$.");
-        def.setTimeout(10_000);
+        def.setTimeout(10);
         def.setRetryCount(4);
-        def.setRetryWait(3_000);
+        def.setRetryWait(3);
         return def;
     }
 }

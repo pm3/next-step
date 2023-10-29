@@ -31,7 +31,7 @@ public class TaskController implements TaskApi {
 
     @Override
     public Task fetch(String id) {
-        return taskDao.selectById(id)
+        return taskDao.loadTaskById(id)
                 .orElseThrow(() -> new UserDataException("not found"));
     }
 }

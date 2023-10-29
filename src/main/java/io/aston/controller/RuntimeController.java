@@ -50,19 +50,28 @@ public class RuntimeController implements RuntimeApi {
                 .orElseThrow(() -> new UserDataException("task not found"));
         WorkflowEntity workflow = workflowDao.loadById(task.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
+        if (workflow.getState() != State.RUNNING) {
+            throw new UserDataException("not running workflow");
+        }
         nextStepService.checkChangeState(task.getState(), taskOutput.getState());
         task.setOutput(taskOutput.getOutput());
         task.setState(taskOutput.getState());
-        task.setFinished(Instant.now());
+        task.setModified(Instant.now());
         taskDao.updateState(task);
         if (taskOutput.getState() == State.COMPLETED && task.getOutput() != null && task.getOutputVar() != null) {
-            if (task.getOutputVar().equals("$.") && task.getOutput() instanceof Map) {
-                workflowDao.updateParams(workflow.getId(), (Map<String, Object>) task.getOutput());
-            } else {
-                workflowDao.updateParams(workflow.getId(), Map.of(task.getOutputVar(), task.getOutput()));
-            }
+            mergeWorkflowContext(task, workflow);
+            workflow = workflowDao.loadById(workflow.getId()).orElseThrow(() -> new UserDataException("reload workflow error"));
         }
-        nextStepService.nextStep(workflow.getId(), task);
-        return nextStepService.toTask(task, workflow);
+        nextStepService.nextStep(workflow, task);
+        return nextStepService.toTask(task);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void mergeWorkflowContext(TaskEntity task, WorkflowEntity workflow) {
+        if (task.getOutputVar().equals("$.") && task.getOutput() instanceof Map) {
+            workflowDao.updateScope(workflow.getId(), (Map<String, Object>) task.getOutput());
+        } else {
+            workflowDao.updateScope(workflow.getId(), Map.of(task.getOutputVar(), task.getOutput()));
+        }
     }
 }

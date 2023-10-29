@@ -35,7 +35,8 @@ public class GenSql {
             if (ft.equals(Integer.class)) stype = "integer";
             if (ft.equals(double.class)) stype = "decimal(5,4)";
             if (ft.equals(Double.class)) stype = "decimal(5,4)";
-            if (ft.equals(Instant.class)) stype = "timestamp";
+            if (ft.equals(Instant.class)) stype = "timestamp with time zone";
+            if (ft.equals(boolean.class) || ft.equals(Boolean.class)) stype = "bool";
             if (f.getName().equals("id") && Number.class.isAssignableFrom(ft)) stype = "serial primary key";
             if (f.getName().equals("created")) notNull = true;
             if (format != null && format.value().equals("json")) stype = "text";

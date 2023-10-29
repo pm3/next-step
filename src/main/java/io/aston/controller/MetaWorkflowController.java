@@ -5,6 +5,7 @@ import io.aston.dao.IMetaDao;
 import io.aston.entity.WorkflowDefEntity;
 import io.aston.model.WorkflowDef;
 import io.aston.user.UserDataException;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Controller;
 
 import java.time.Instant;
@@ -43,8 +44,9 @@ public class MetaWorkflowController implements MetaWorkflowApi {
     }
 
     @Override
-    public List<WorkflowDef> search(Boolean latest, String name) {
-        return metaDao.search(latest, name);
+    public List<WorkflowDef> search(@Nullable Boolean latest, @Nullable String name) {
+        return metaDao.search(latest, name)
+                .stream().map(WorkflowDefEntity::getData).toList();
     }
 
     @Override

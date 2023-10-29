@@ -22,7 +22,7 @@ public class Task {
     private Object output;
     private State state;
     private Instant created;
-    private Instant finished;
+    private Instant modified;
     private int retries;
     @Format(JsonConverterFactory.JSON)
     private TaskDef taskDef;
@@ -91,12 +91,12 @@ public class Task {
         this.created = created;
     }
 
-    public Instant getFinished() {
-        return finished;
+    public Instant getModified() {
+        return modified;
     }
 
-    public void setFinished(Instant finished) {
-        this.finished = finished;
+    public void setModified(Instant modified) {
+        this.modified = modified;
     }
 
     public int getRetries() {

@@ -3,7 +3,6 @@ package io.aston.dao;
 import com.aston.micronaut.sql.aop.Query;
 import com.aston.micronaut.sql.aop.SqlApi;
 import io.aston.entity.WorkflowDefEntity;
-import io.aston.model.WorkflowDef;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,9 +16,9 @@ public interface IMetaDao {
     Optional<WorkflowDefEntity> loadById(String name);
 
     @Query("""
-            select data
+            select *
             from ns_workflow_def
-            where latest=1
+            where latest=true
             and name like :name || '/%'
             order by created asc
             limit 1
@@ -27,12 +26,12 @@ public interface IMetaDao {
     Optional<WorkflowDefEntity> searchLatestByName(String name);
 
     @Query("""
-            select data
+            select *
             from ns_workflow_def
             where 1=1
             /** and latest = :latest */
             /** and name like :name || '/%' */
             order by created desc
             """)
-    List<WorkflowDef> search(Boolean latest, String name);
+    List<WorkflowDefEntity> search(Boolean latest, String name);
 }

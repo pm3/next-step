@@ -14,10 +14,7 @@ import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Controller;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Controller("/v1")
 public class WorkflowController implements WorkflowApi {
@@ -62,14 +59,16 @@ public class WorkflowController implements WorkflowApi {
         workflow.setCreated(now);
         workflow.setState(State.SCHEDULED);
         workflow.setParams(workflowCreate.getParams() != null ? workflowCreate.getParams() : new HashMap<>());
-        workflow.setDefTasks(workflowCreate.getTasks());
-
+        workflow.setScope(workflow.getParams());
+        Map<Integer, TaskDef> defMap = new HashMap<>();
         int ref = 0;
-        for (TaskDef def : workflow.getDefTasks()) {
+        for (TaskDef def : workflowCreate.getTasks()) {
             def.setRef(++ref);
+            defMap.put(ref, def);
         }
+        workflow.setDefTasks(defMap);
         workflowDao.insert(workflow);
-        runtimeService.nextStep(workflow.getId(), null);
+        runtimeService.nextStep(workflow, null);
 
         Workflow w2 = new Workflow();
         w2.setId(workflow.getId());
@@ -78,6 +77,7 @@ public class WorkflowController implements WorkflowApi {
         w2.setCreated(workflow.getCreated());
         w2.setState(workflow.getState());
         w2.setParams(workflow.getParams());
+        w2.setScope(workflow.getScope());
         w2.setTasks(new ArrayList<>());
         return w2;
     }
