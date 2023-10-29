@@ -1,0 +1,8 @@
+datasources:
+  default:
+    url: jdbc:postgresql://localhost:5432/nextstep
+    username: aston
+    password: aston
+
+logger.levels.io.micronaut.http.server: DEBUG
+logger.levels.com.aston: DEBUG

@@ -1,0 +1,48 @@
+micronaut:
+  server:
+    netty:
+      worker:
+        threads: 20
+  application:
+    name: next-step
+  router:
+    static-resources:
+      swagger:
+        paths: classpath:META-INF/swagger
+        mapping: /swagger/**
+      swagger-ui:
+        paths: classpath:META-INF/swagger/views/swagger-ui
+        mapping: /swagger-ui/**
+  test.resources.enabled: false
+
+datasources:
+  default:
+    db-type: postgres
+    dialect: POSTGRES
+    driverClassName: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/nextstep
+    testOnBorrow: true
+    testWhileIdle: true
+    timeBetweenEvictionRunsMillis: 60000
+    minEvictableIdleTimeMillis: 30000
+    validationQuery: SELECT 1
+    max-active: 15
+    max-idle: 10
+    max-wait: 8000
+    username: aston
+    password: aston
+
+flyway:
+  datasources:
+    default:
+      enabled: true
+      locations:
+        - classpath:db
+
+jackson:
+  serializationInclusion: NON_NULL
+  date-format: yyyy-MM-dd@HH:mm:ss.SSSZ
+
+logger.levels.io.micronaut.http.server: DEBUG
+logger.levels.com.aston: DEBUG
+logger.levels.io.aston: DEBUG
