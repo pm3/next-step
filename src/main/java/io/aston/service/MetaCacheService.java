@@ -40,8 +40,8 @@ public class MetaCacheService {
 
     public TaskDef workflowTask(String workflowId, int ref) {
         List<TaskDef> l = workflowTasks(workflowId);
-        if (l != null && ref < l.size() && l.get(ref).getRef() == ref) {
-            return l.get(ref);
+        if (l != null && ref >= 1 && ref < l.size() && l.get(ref - 1).getRef() == ref) {
+            return l.get(ref - 1);
         }
         if (l != null) {
             for (TaskDef def : l) {
