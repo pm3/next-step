@@ -55,7 +55,7 @@ public class AddWorkflow {
 
             for (int i = 0; i < 50; i++) {
                 try {
-                    workeer(add, t1, total.incrementAndGet());
+                    worker(add, t1, total.incrementAndGet());
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -75,7 +75,7 @@ public class AddWorkflow {
 
     }
 
-    private static void workeer(AddWorkflow add, long t1, int i) throws Exception {
+    private static void worker(AddWorkflow add, long t1, int i) throws Exception {
         System.out.println("test queue " + i);
 
         String taskJson = add.get("http://localhost:8080/v1/runtime/queues?taskName=echo&workerId=local&timeout=1");

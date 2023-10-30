@@ -101,9 +101,6 @@ public class NextStepService {
         }
     }
 
-    public void checkChangeState(State state, State state2) {
-    }
-
     public TaskDef nextTaskDef(WorkflowEntity workflow, int lastRef) {
         List<TaskDef> l = metaCacheService.workflowTasks(workflow.getId());
         if (l != null) {
@@ -120,6 +117,7 @@ public class NextStepService {
         return null;
     }
 
+    @SuppressWarnings("unchecked")
     public Map<String, Object> computeParams(Map<String, Object> paramsDef, WorkflowEntity workflow) {
         Map<String, Object> params = new HashMap<>();
         if (needScope(paramsDef)) {
@@ -137,8 +135,8 @@ public class NextStepService {
                 }
             }
             for (Map.Entry<String, Object> e : paramsDef.entrySet()) {
-                if (e.getValue() instanceof String sval && sval.startsWith("${") && sval.endsWith("}")) {
-                    Object val = computeValue(sval.substring(2, sval.length() - 1), scope);
+                if (e.getValue() instanceof String str && str.startsWith("${") && str.endsWith("}")) {
+                    Object val = computeValue(str.substring(2, str.length() - 1), scope);
                     params.put(e.getKey(), val);
                 } else {
                     params.put(e.getKey(), e.getValue());
@@ -152,7 +150,7 @@ public class NextStepService {
 
     private boolean needScope(Map<String, Object> paramsDef) {
         for (Map.Entry<String, Object> e : paramsDef.entrySet()) {
-            if (e.getValue() instanceof String sval && sval.startsWith("${") && sval.endsWith("}")) {
+            if (e.getValue() instanceof String str && str.startsWith("${") && str.endsWith("}")) {
                 return true;
             }
         }

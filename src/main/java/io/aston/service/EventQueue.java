@@ -40,15 +40,15 @@ public class EventQueue implements ApplicationEventListener<HttpRequestTerminate
     public void addEvent(IEvent event) {
         logger.debug("addEvent {}", toJson(event));
         BlockingQueue<IEvent> eventQueue = eventQueue(event.getName());
-        boolean sended = false;
+        boolean sent = false;
         if (eventQueue.size() == 0) {
             Worker worker = nextEventWorker(event.getName());
             if (worker != null) {
                 sendEvent(worker.removeFuture(), event);
-                sended = true;
+                sent = true;
             }
         }
-        if (!sended) {
+        if (!sent) {
             eventQueue.add(event);
         }
     }
