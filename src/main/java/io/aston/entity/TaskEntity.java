@@ -4,17 +4,18 @@ import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.entity.Table;
 import io.aston.model.State;
+import io.aston.service.IEvent;
 import io.micronaut.core.annotation.Nullable;
 
 import java.time.Instant;
 import java.util.Map;
 
 @Table(name = "ns_task")
-public class TaskEntity {
+public class TaskEntity implements IEvent {
     private String id;
     private String workflowId;
     private int ref;
-    private String taskName;
+    private String name;
     private String workflowName;
     @Nullable
     @Format(JsonConverterFactory.JSON)
@@ -55,12 +56,12 @@ public class TaskEntity {
         this.ref = ref;
     }
 
-    public String getTaskName() {
-        return taskName;
+    public String getName() {
+        return name;
     }
 
-    public void setTaskName(String taskName) {
-        this.taskName = taskName;
+    public void setName(String name) {
+        this.name = name;
     }
 
     public String getWorkflowName() {

@@ -17,17 +17,17 @@ import java.util.function.Consumer;
 @Singleton
 public class RunTaskService {
     private final ITaskDao taskDao;
-    private final TaskQueue taskQueue;
+    private final EventQueue eventQueue;
     private final Map<String, RunTask> runTaskMap = new ConcurrentHashMap<>();
     private static final Logger logger = LoggerFactory.getLogger(RunTaskService.class);
 
     public record RunTask(TaskEntity task, Consumer<TaskEntity> changeState) {
     }
 
-    public RunTaskService(ITaskDao taskDao, TaskQueue taskQueue) {
+    public RunTaskService(ITaskDao taskDao, EventQueue eventQueue) {
         this.taskDao = taskDao;
-        this.taskQueue = taskQueue;
-        taskQueue.setNextStepRunning(this::nextStepRunning);
+        this.eventQueue = eventQueue;
+        eventQueue.setNextStepRunning(this::nextStepRunning);
     }
 
     public void runTask(TaskEntity task, Consumer<TaskEntity> changeState) {
@@ -35,7 +35,7 @@ public class RunTaskService {
             runTaskMap.put(task.getId(), new RunTask(task, changeState));
         }
         if (task.getState() == State.SCHEDULED) {
-            taskQueue.addTask(task);
+            eventQueue.addEvent(task);
         } else if (task.getState() == State.RUNNING) {
             long timeout = task.getRunningTimeout();
             if (timeout < 0) timeout = 0L;
@@ -59,18 +59,20 @@ public class RunTaskService {
         }
     }
 
-    private boolean nextStepRunning(TaskEntity task) {
-        Instant now = Instant.now();
-        if (taskDao.updateState(task.getId(), State.SCHEDULED, State.RUNNING, null, now) == 0) {
-            logger.debug("stop running, task not scheduled " + task.getId());
-            return false;
+    private boolean nextStepRunning(IEvent event) {
+        if (event instanceof TaskEntity task) {
+            Instant now = Instant.now();
+            if (taskDao.updateState(task.getId(), State.SCHEDULED, State.RUNNING, null, now) == 0) {
+                logger.debug("stop running, task not scheduled " + task.getId());
+                return false;
+            }
+            task.setState(State.RUNNING);
+            task.setModified(now);
+            changeState(task);
+            long timeout = task.getRunningTimeout();
+            if (timeout < 0) timeout = 0;
+            scheduleTaskJob(new Date(System.currentTimeMillis() + timeout * 1000L), task.getId(), this::timeoutTaskRunning);
         }
-        task.setState(State.RUNNING);
-        task.setModified(now);
-        changeState(task);
-        long timeout = task.getRunningTimeout();
-        if (timeout < 0) timeout = 0;
-        scheduleTaskJob(new Date(System.currentTimeMillis() + timeout * 1000L), task.getId(), this::timeoutTaskRunning);
         return true;
     }
 
@@ -90,7 +92,7 @@ public class RunTaskService {
         if (taskDao.updateStateAndRetry(taskId, State.FAILED, State.SCHEDULED, Instant.now()) > 0) {
             TaskEntity task = taskDao.loadById(taskId).orElseThrow(() -> new UserDataException("task not found"));
             changeState(task);
-            taskQueue.addTask(task);
+            eventQueue.addEvent(task);
         }
     }
 
@@ -102,6 +104,6 @@ public class RunTaskService {
     }
 
     private void scheduleTaskJob(Date expire, String taskId, Consumer<String> job) {
-        taskQueue.schedule(expire, () -> job.accept(taskId));
+        eventQueue.schedule(expire, () -> job.accept(taskId));
     }
 }

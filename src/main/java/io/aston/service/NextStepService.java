@@ -86,7 +86,7 @@ public class NextStepService {
             newTask.setId(UUID.randomUUID().toString());
             newTask.setWorkflowId(workflow.getId());
             newTask.setRef(nextTaskDef.getRef());
-            newTask.setTaskName(nextTaskDef.getName());
+            newTask.setName(nextTaskDef.getName());
             newTask.setWorkflowName(workflow.getWorkflowName());
             newTask.setParams(computeParams(nextTaskDef.getParams(), workflow));
             newTask.setState(State.SCHEDULED);

@@ -8,8 +8,9 @@ import io.aston.entity.WorkflowEntity;
 import io.aston.model.State;
 import io.aston.model.Task;
 import io.aston.model.TaskOutput;
+import io.aston.service.EventQueue;
+import io.aston.service.IEvent;
 import io.aston.service.NextStepService;
-import io.aston.service.TaskQueue;
 import io.aston.service.Worker;
 import io.aston.user.UserDataException;
 import io.micronaut.http.HttpRequest;
@@ -26,25 +27,25 @@ public class RuntimeController implements RuntimeApi {
     private final ITaskDao taskDao;
     private final IWorkflowDao workflowDao;
     private final NextStepService nextStepService;
-    private final TaskQueue taskQueue;
+    private final EventQueue eventQueue;
 
-    public RuntimeController(ITaskDao taskDao, IWorkflowDao workflowDao, NextStepService nextStepService, TaskQueue taskQueue) {
+    public RuntimeController(ITaskDao taskDao, IWorkflowDao workflowDao, NextStepService nextStepService, EventQueue eventQueue) {
         this.taskDao = taskDao;
         this.workflowDao = workflowDao;
         this.nextStepService = nextStepService;
-        this.taskQueue = taskQueue;
+        this.eventQueue = eventQueue;
     }
 
     @Override
     public CompletableFuture<HttpResponse<Task>> queue(String taskName, String workerId, Long timeout, HttpRequest<?> request) {
         String wid = UUID.randomUUID().toString();
         request.setAttribute("wid", wid);
-        CompletableFuture<TaskEntity> future = new CompletableFuture<>();
+        CompletableFuture<IEvent> future = new CompletableFuture<>();
 
         Worker worker = new Worker(taskName, workerId, wid, future);
         if (timeout == null || timeout < 0 || timeout > 45) timeout = 30L;
-        taskQueue.workerCall(worker, timeout * 1000L);
-        return future.thenApply((t) -> (t != null) ? HttpResponse.ok(toTask(t)) : HttpResponse.noContent());
+        eventQueue.workerCall(worker, timeout * 1000L);
+        return future.thenApply((t) -> (t != null) ? HttpResponse.ok(toTask((TaskEntity) t)) : HttpResponse.noContent());
     }
 
     private Task toTask(TaskEntity task) {
@@ -52,7 +53,7 @@ public class RuntimeController implements RuntimeApi {
         t2.setId(task.getId());
         t2.setWorkflowId(task.getWorkflowId());
         t2.setRef(task.getRef());
-        t2.setTaskName(task.getTaskName());
+        t2.setName(task.getName());
         t2.setWorkflowName(task.getWorkflowName());
         t2.setParams(task.getParams());
         t2.setOutput(task.getOutput());
