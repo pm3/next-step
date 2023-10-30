@@ -1,5 +1,6 @@
 package io.aston.service;
 
+import io.aston.controller.RuntimeController;
 import io.aston.dao.ITaskDao;
 import io.aston.entity.TaskEntity;
 import io.aston.model.State;
@@ -35,7 +36,7 @@ public class RunTaskService {
             runTaskMap.put(task.getId(), new RunTask(task, changeState));
         }
         if (task.getState() == State.SCHEDULED) {
-            eventQueue.addEvent(task);
+            eventQueue.addEvent(new RuntimeController.TaskEvent(task));
         } else if (task.getState() == State.RUNNING) {
             long timeout = task.getRunningTimeout();
             if (timeout < 0) timeout = 0L;
@@ -60,7 +61,8 @@ public class RunTaskService {
     }
 
     private boolean nextStepRunning(IEvent event) {
-        if (event instanceof TaskEntity task) {
+        if (event instanceof RuntimeController.TaskEvent taskEvent) {
+            TaskEntity task = taskEvent.task();
             Instant now = Instant.now();
             if (taskDao.updateState(task.getId(), State.SCHEDULED, State.RUNNING, null, now) == 0) {
                 logger.debug("stop running, task not scheduled " + task.getId());
@@ -92,7 +94,7 @@ public class RunTaskService {
         if (taskDao.updateStateAndRetry(taskId, State.FAILED, State.SCHEDULED, Instant.now()) > 0) {
             TaskEntity task = taskDao.loadById(taskId).orElseThrow(() -> new UserDataException("task not found"));
             changeState(task);
-            eventQueue.addEvent(task);
+            eventQueue.addEvent(new RuntimeController.TaskEvent(task));
         }
     }
 

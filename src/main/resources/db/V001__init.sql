@@ -4,7 +4,7 @@ create table ns_task (
   id varchar(125) not null primary key,
   workflowId varchar(125) not null,
   ref integer not null,
-  name varchar(125) not null,
+  taskName varchar(125) not null,
   workflowName varchar(125) not null,
   params text,
   output text,
@@ -24,7 +24,8 @@ create table ns_workflow (
   created timestamp with time zone not null,
   modified timestamp with time zone,
   state varchar(125) not null,
-  params text
+  params text,
+  worker varchar(125) not null
 );
 
 create table ns_meta_template (

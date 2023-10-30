@@ -15,7 +15,7 @@ public class Task {
     private String id;
     private String workflowId;
     private int ref;
-    private String name;
+    private String taskName;
     private String workflowName;
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
@@ -50,12 +50,12 @@ public class Task {
         this.ref = ref;
     }
 
-    public String getName() {
-        return name;
+    public String getTaskName() {
+        return taskName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setTaskName(String taskName) {
+        this.taskName = taskName;
     }
 
     public String getWorkflowName() {

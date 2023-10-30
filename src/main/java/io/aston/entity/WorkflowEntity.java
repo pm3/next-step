@@ -21,6 +21,7 @@ public class WorkflowEntity {
     @Nullable
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
+    private String worker;
 
     public String getId() {
         return id;
@@ -76,5 +77,13 @@ public class WorkflowEntity {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
+    }
+
+    public String getWorker() {
+        return worker;
+    }
+
+    public void setWorker(String worker) {
+        this.worker = worker;
     }
 }

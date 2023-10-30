@@ -51,10 +51,6 @@ public class NextStepService {
                 return;
             }
             if (lastEntity.getState() == State.FAILED) {
-                if (lastEntity.getMaxRetryCount() > lastEntity.getRetries()) {
-                    runTaskService.runTask(lastEntity, null);
-                    return;
-                }
                 lastEntity.setState(State.FATAL_ERROR);
                 lastEntity.setOutput("max retry");
                 lastEntity.setModified(Instant.now());
@@ -86,7 +82,7 @@ public class NextStepService {
             newTask.setId(UUID.randomUUID().toString());
             newTask.setWorkflowId(workflow.getId());
             newTask.setRef(nextTaskDef.getRef());
-            newTask.setName(nextTaskDef.getName());
+            newTask.setTaskName(nextTaskDef.getName());
             newTask.setWorkflowName(workflow.getWorkflowName());
             newTask.setParams(computeParams(nextTaskDef.getParams(), workflow));
             newTask.setState(State.SCHEDULED);

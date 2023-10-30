@@ -7,6 +7,7 @@ import io.aston.dao.IWorkflowDao;
 import io.aston.entity.MetaTemplateEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
+import io.aston.service.EventQueue;
 import io.aston.service.MetaCacheService;
 import io.aston.service.NextStepService;
 import io.aston.user.UserDataException;
@@ -22,14 +23,17 @@ import java.util.UUID;
 @Controller("/v1")
 public class WorkflowController implements WorkflowApi {
 
+    public static final String LOCAL_WORKER = "#local";
     private final IWorkflowDao workflowDao;
     private final ITaskDao taskDao;
+    private final EventQueue eventQueue;
     private final NextStepService runtimeService;
     private final MetaCacheService metaCacheService;
 
-    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, NextStepService runtimeService, MetaCacheService metaCacheService) {
+    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, EventQueue eventQueue, NextStepService runtimeService, MetaCacheService metaCacheService) {
         this.workflowDao = workflowDao;
         this.taskDao = taskDao;
+        this.eventQueue = eventQueue;
         this.runtimeService = runtimeService;
         this.metaCacheService = metaCacheService;
     }
@@ -67,9 +71,10 @@ public class WorkflowController implements WorkflowApi {
             def.setRef(++ref);
             defTasks.add(def);
         }
+        if (defTasks.size() > 0) {
+            workflow.setWorker(LOCAL_WORKER);
+        }
         workflowDao.insert(workflow);
-        metaCacheService.saveWorkflowTasks(workflow.getId(), defTasks);
-        runtimeService.nextStep(workflow, null);
 
         Workflow w2 = new Workflow();
         w2.setId(workflow.getId());
@@ -79,6 +84,15 @@ public class WorkflowController implements WorkflowApi {
         w2.setState(workflow.getState());
         w2.setParams(workflow.getParams());
         w2.setTasks(new ArrayList<>());
+
+        if (LOCAL_WORKER.equals(workflow.getWorker())) {
+            //local flow
+            metaCacheService.saveWorkflowTasks(workflow.getId(), defTasks);
+            runtimeService.nextStep(workflow, null);
+        } else {
+            //externalFlow
+            eventQueue.addEvent(new RuntimeController.WorkflowEvent(w2));
+        }
         return w2;
     }
 

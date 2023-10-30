@@ -1,7 +1,6 @@
 package io.aston.api;
 
-import io.aston.model.Task;
-import io.aston.model.TaskOutput;
+import io.aston.model.*;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -16,17 +15,40 @@ import java.util.concurrent.CompletableFuture;
 
 public interface RuntimeApi {
 
-    @Operation(tags = {"internal"})
-    @Get("/runtime/queues/")
+    @Operation(tags = {"runtime"})
+    @Get("/runtime/queues/new-tasks")
     @ApiResponse(content = @Content(schema = @Schema(ref = "Task")), description = "200 response")
     @ApiResponse(responseCode = "204", description = "204 empty response")
-    CompletableFuture<HttpResponse<Task>> queue(
+    CompletableFuture<HttpResponse<Task>> queueNewTasks(
             @QueryValue String taskName,
             @QueryValue String workerId,
             @Nullable @QueryValue Long timeout,
             @Parameter(hidden = true) HttpRequest<?> request);
 
-    @Operation(tags = {"internal"})
+    @Operation(tags = {"runtime"})
+    @Get("/runtime/queues/finished-tasks")
+    @ApiResponse(content = @Content(schema = @Schema(ref = "Task")), description = "200 response")
+    @ApiResponse(responseCode = "204", description = "204 empty response")
+    CompletableFuture<HttpResponse<TaskFinish>> queueFinishedTasks(
+            @QueryValue String workerId,
+            @Nullable @QueryValue Long timeout,
+            @Parameter(hidden = true) HttpRequest<?> request);
+
+    @Operation(tags = {"runtime"})
+    @Get("/runtime/queues/free-workflows")
+    @ApiResponse(content = @Content(schema = @Schema(ref = "Task")), description = "200 response")
+    @ApiResponse(responseCode = "204", description = "204 empty response")
+    CompletableFuture<HttpResponse<Workflow>> queueFreeWorkflows(
+            @QueryValue String workflowName,
+            @QueryValue String workerId,
+            @Nullable @QueryValue Long timeout,
+            @Parameter(hidden = true) HttpRequest<?> request);
+
+    @Operation(tags = {"runtime"})
     @Put("/runtime/tasks/{id}")
     Task changeTask(@PathVariable String id, @Body TaskOutput taskOutput);
+
+    @Operation(tags = {"runtime"})
+    @Post("/runtime/tasks/")
+    Task createTask(@Body TaskCreate taskCreate);
 }
