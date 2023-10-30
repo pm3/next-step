@@ -1,10 +1,8 @@
 package io.aston.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.aston.model.Task;
+import io.aston.entity.TaskEntity;
 import io.micronaut.context.event.ApplicationEventListener;
-import io.micronaut.http.HttpResponse;
-import io.micronaut.http.HttpStatus;
 import io.micronaut.http.context.event.HttpRequestTerminatedEvent;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
@@ -25,10 +23,10 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
 
     private final Timer timer;
     private final ObjectMapper objectMapper;
-    private final ConcurrentHashMap<String, BlockingQueue<Task>> taskQueueMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, BlockingQueue<TaskEntity>> taskQueueMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, BlockingQueue<Worker>> workerQueueMap = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Worker> workerMap = new ConcurrentHashMap<>();
-    private Function<Task, Boolean> nextStepRunning = null;
+    private Function<TaskEntity, Boolean> nextStepRunning = null;
     private static final Logger logger = LoggerFactory.getLogger(TaskQueue.class);
 
     public TaskQueue(ObjectMapper objectMapper) {
@@ -36,13 +34,13 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
         this.objectMapper = objectMapper;
     }
 
-    public void setNextStepRunning(Function<Task, Boolean> nextStepRunning) {
+    public void setNextStepRunning(Function<TaskEntity, Boolean> nextStepRunning) {
         this.nextStepRunning = nextStepRunning;
     }
 
-    public void addTask(Task task) {
+    public void addTask(TaskEntity task) {
         logger.debug("addTask {}", toJson(task));
-        BlockingQueue<Task> taskQueue = taskQueue(task.getTaskName());
+        BlockingQueue<TaskEntity> taskQueue = taskQueue(task.getTaskName());
         boolean sended = false;
         if (taskQueue.size() == 0) {
             Worker worker = nextWorker(task.getTaskName());
@@ -57,9 +55,9 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
     }
 
     public void workerCall(Worker worker, long timeout) {
-        BlockingQueue<Task> taskQueue = taskQueue(worker.getTaskName());
+        BlockingQueue<TaskEntity> taskQueue = taskQueue(worker.getTaskName());
         BlockingQueue<Worker> workerQueue = workerQueue(worker.getTaskName());
-        Task task = nextTask(taskQueue);
+        TaskEntity task = nextTask(taskQueue);
         if (task != null) {
             sendTask(worker.removeFuture(), task);
         } else {
@@ -88,7 +86,7 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
         }, time);
     }
 
-    private BlockingQueue<Task> taskQueue(String taskName) {
+    private BlockingQueue<TaskEntity> taskQueue(String taskName) {
         return taskQueueMap.computeIfAbsent(taskName, (k) -> new LinkedBlockingQueue<>());
     }
 
@@ -96,9 +94,9 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
         return workerQueueMap.computeIfAbsent(taskName, (k) -> new LinkedBlockingQueue<>());
     }
 
-    private synchronized Task nextTask(BlockingQueue<Task> taskQueue) {
+    private synchronized TaskEntity nextTask(BlockingQueue<TaskEntity> taskQueue) {
         while (taskQueue.size() > 0) {
-            Task task = taskQueue.poll();
+            TaskEntity task = taskQueue.poll();
             if (task != null) return task;
         }
         return null;
@@ -109,7 +107,7 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
         while (workerQueue.size() > 0) {
             Worker worker = workerQueue.poll();
             if (worker != null) {
-                CompletableFuture<HttpResponse<Task>> future = worker.removeFuture();
+                CompletableFuture<TaskEntity> future = worker.removeFuture();
                 if (future != null)
                     return new Worker(worker.getTaskName(), worker.getWorkerName(), worker.getWid(), future);
             }
@@ -117,7 +115,7 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
         return null;
     }
 
-    public void sendTask(CompletableFuture<HttpResponse<Task>> future, Task task) {
+    public void sendTask(CompletableFuture<TaskEntity> future, TaskEntity task) {
         if (task != null && nextStepRunning != null) {
             if (!nextStepRunning.apply(task)) {
                 task = null;
@@ -125,16 +123,16 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
         }
         if (task != null) {
             logger.debug("task sent to worker {}", toJson(task));
-            future.complete(HttpResponse.ok(task));
+            future.complete(task);
         } else {
-            future.complete(HttpResponse.status(HttpStatus.NO_CONTENT));
+            future.complete(null);
         }
     }
 
     private void timeoutWorkerResponse(Worker worker, long timeout) {
         schedule(new Date(System.currentTimeMillis() + timeout), () -> {
             workerMap.remove(worker.getWid());
-            CompletableFuture<HttpResponse<Task>> future = worker.removeFuture();
+            CompletableFuture<TaskEntity> future = worker.removeFuture();
             if (future != null) sendTask(future, null);
         });
     }
@@ -148,7 +146,7 @@ public class TaskQueue implements ApplicationEventListener<HttpRequestTerminated
         }
     }
 
-    String toJson(Object val) {
+    private String toJson(Object val) {
         try {
             return objectMapper.writeValueAsString(val);
         } catch (Exception e) {

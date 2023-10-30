@@ -39,18 +39,18 @@ public class MetaCacheService {
         return l;
     }
 
-    public TaskDef workflowTask(String workflowId, int ref) {
-        List<TaskDef> l = workflowTasks(workflowId);
-        if (l != null && ref >= 1 && ref < l.size() && l.get(ref - 1).getRef() == ref) {
-            return l.get(ref - 1);
-        }
-        if (l != null) {
-            for (TaskDef def : l) {
-                if (def.getRef() == ref) return def;
-            }
-        }
-        return null;
-    }
+//    public TaskDef workflowTask(String workflowId, int ref) {
+//        List<TaskDef> l = workflowTasks(workflowId);
+//        if (l != null && ref >= 1 && ref < l.size() && l.get(ref - 1).getRef() == ref) {
+//            return l.get(ref - 1);
+//        }
+//        if (l != null) {
+//            for (TaskDef def : l) {
+//                if (def.getRef() == ref) return def;
+//            }
+//        }
+//        return null;
+//    }
 
     public Map<Integer, TaskDef> workflowTaskMap(String workflowId) {
         Map<Integer, TaskDef> defMap = new HashMap<>();

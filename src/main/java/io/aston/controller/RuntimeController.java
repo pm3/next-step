@@ -9,6 +9,7 @@ import io.aston.model.State;
 import io.aston.model.Task;
 import io.aston.model.TaskOutput;
 import io.aston.service.NextStepService;
+import io.aston.service.TaskQueue;
 import io.aston.service.Worker;
 import io.aston.user.UserDataException;
 import io.micronaut.http.HttpRequest;
@@ -25,22 +26,41 @@ public class RuntimeController implements RuntimeApi {
     private final ITaskDao taskDao;
     private final IWorkflowDao workflowDao;
     private final NextStepService nextStepService;
+    private final TaskQueue taskQueue;
 
-    public RuntimeController(ITaskDao taskDao, IWorkflowDao workflowDao, NextStepService nextStepService) {
+    public RuntimeController(ITaskDao taskDao, IWorkflowDao workflowDao, NextStepService nextStepService, TaskQueue taskQueue) {
         this.taskDao = taskDao;
         this.workflowDao = workflowDao;
         this.nextStepService = nextStepService;
+        this.taskQueue = taskQueue;
     }
 
     @Override
     public CompletableFuture<HttpResponse<Task>> queue(String taskName, String workerId, Long timeout, HttpRequest<?> request) {
         String wid = UUID.randomUUID().toString();
         request.setAttribute("wid", wid);
-        CompletableFuture<HttpResponse<Task>> future = new CompletableFuture<>();
+        CompletableFuture<TaskEntity> future = new CompletableFuture<>();
+
         Worker worker = new Worker(taskName, workerId, wid, future);
         if (timeout == null || timeout < 0 || timeout > 45) timeout = 30L;
-        nextStepService.getTaskQueue().workerCall(worker, timeout * 1000L);
-        return future;
+        taskQueue.workerCall(worker, timeout * 1000L);
+        return future.thenApply((t) -> (t != null) ? HttpResponse.ok(toTask(t)) : HttpResponse.noContent());
+    }
+
+    private Task toTask(TaskEntity task) {
+        Task t2 = new Task();
+        t2.setId(task.getId());
+        t2.setWorkflowId(task.getWorkflowId());
+        t2.setRef(task.getRef());
+        t2.setTaskName(task.getTaskName());
+        t2.setWorkflowName(task.getWorkflowName());
+        t2.setParams(task.getParams());
+        t2.setOutput(task.getOutput());
+        t2.setState(task.getState());
+        t2.setCreated(task.getCreated());
+        t2.setModified(task.getModified());
+        t2.setRetries(task.getRetries());
+        return t2;
     }
 
     @Override
@@ -58,6 +78,6 @@ public class RuntimeController implements RuntimeApi {
         task.setModified(Instant.now());
         taskDao.updateState(task);
         nextStepService.nextStep(workflow, task);
-        return nextStepService.toTask(task);
+        return toTask(task);
     }
 }

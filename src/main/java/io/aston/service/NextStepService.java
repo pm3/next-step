@@ -6,7 +6,6 @@ import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.State;
-import io.aston.model.Task;
 import io.aston.model.TaskDef;
 import jakarta.inject.Singleton;
 import ognl.Ognl;
@@ -14,33 +13,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @Singleton
 public class NextStepService {
 
     private final IWorkflowDao workflowDao;
     private final ITaskDao taskDao;
-    private final TaskQueue taskQueue;
+    private final RunTaskService runTaskService;
     private final MetaCacheService metaCacheService;
 
     private static final Logger logger = LoggerFactory.getLogger(NextStepService.class);
 
-    public NextStepService(IWorkflowDao workflowDao, ITaskDao taskDao, TaskQueue taskQueue, MetaCacheService metaCacheService) {
+    public NextStepService(IWorkflowDao workflowDao, ITaskDao taskDao, RunTaskService runTaskService, MetaCacheService metaCacheService) {
         this.workflowDao = workflowDao;
         this.taskDao = taskDao;
-        this.taskQueue = taskQueue;
+        this.runTaskService = runTaskService;
         this.metaCacheService = metaCacheService;
-        taskQueue.setNextStepRunning(this::nextStepRunning);
-
-        List<Task> oldTasks = taskDao.selectByQuery(null, Multi.of(List.of("SCHEDULED")), null, null, null);
-        for (Task task : oldTasks) {
-            taskQueue.addTask(task);
-        }
-    }
-
-    public TaskQueue getTaskQueue() {
-        return taskQueue;
     }
 
     public void nextStep(WorkflowEntity workflow, TaskEntity lastEntity) {
@@ -59,9 +51,8 @@ public class NextStepService {
                 return;
             }
             if (lastEntity.getState() == State.FAILED) {
-                TaskDef def = metaCacheService.workflowTask(workflow.getId(), lastEntity.getRef());
-                if (def != null && def.getRetryCount() > lastEntity.getRetries()) {
-                    delayFailedRetry(lastEntity.getId(), def.getRetryWait());
+                if (lastEntity.getMaxRetryCount() > lastEntity.getRetries()) {
+                    runTaskService.runTask(lastEntity, null);
                     return;
                 }
                 lastEntity.setState(State.FATAL_ERROR);
@@ -101,77 +92,17 @@ public class NextStepService {
             newTask.setState(State.SCHEDULED);
             newTask.setCreated(Instant.now());
             newTask.setRetries(0);
+            newTask.setRunningTimeout(nextTaskDef.getTimeout());
+            newTask.setMaxRetryCount(newTask.getMaxRetryCount());
+            newTask.setRetryWait(newTask.getRetryWait());
             taskDao.insert(newTask);
 
             if (workflow.getState() == State.SCHEDULED) {
                 workflow.setState(State.RUNNING);
                 workflowDao.updateState(workflow);
             }
-
-            taskQueue.addTask(toTask(newTask));
+            runTaskService.runTask(newTask, null);
         }
-    }
-
-    private boolean nextStepRunning(Task task) {
-        Instant now = Instant.now();
-        if (taskDao.updateState(task.getId(), State.SCHEDULED, State.RUNNING, now) == 0) {
-            logger.debug("stop running, task not scheduled " + task.getId());
-            return false;
-        }
-        task.setState(State.RUNNING);
-        task.setModified(now);
-        TaskDef def0 = metaCacheService.workflowTask(task.getWorkflowId(), task.getRef());
-        String taskId = task.getId();
-        if (def0 != null) {
-            long timeout = def0.getTimeout();
-            if (timeout <= 0) timeout = 30;
-            taskQueue.schedule(new Date(System.currentTimeMillis() + timeout * 1000L), () -> {
-                TaskEntity taskEntity = taskDao.loadById(taskId).orElse(null);
-                if (taskEntity != null && taskEntity.getState() == State.RUNNING) {
-                    taskEntity.setState(State.FAILED);
-                    taskEntity.setOutput("timeout");
-                    taskEntity.setModified(Instant.now());
-                    taskDao.updateState(taskEntity);
-                    TaskDef def = metaCacheService.workflowTask(taskEntity.getWorkflowId(), taskEntity.getRef());
-                    if (def != null && def.getRetryCount() > taskEntity.getRetries()) {
-                        delayFailedRetry(taskEntity.getId(), def.getRetryWait());
-                    }
-                }
-            });
-        }
-        return true;
-    }
-
-    private void delayFailedRetry(String taskId, long retryDelay) {
-        if (retryDelay <= 0) retryDelay = 60;
-        taskQueue.schedule(new Date(System.currentTimeMillis() + retryDelay * 1000), () -> {
-            TaskEntity task = taskDao.loadById(taskId).orElse(null);
-            if (task != null && task.getState() == State.FAILED) {
-                TaskDef def = metaCacheService.workflowTask(task.getWorkflowId(), task.getRef());
-                logger.debug("failed to schedule" + task.getRetries() + " < " + def.getRetryCount() + " " + task.getId());
-                task.setState(State.SCHEDULED);
-                task.setRetries(task.getRetries() + 1);
-                task.setModified(Instant.now());
-                taskDao.updateState(task);
-                taskQueue.addTask(toTask(task));
-            }
-        });
-    }
-
-    public Task toTask(TaskEntity task) {
-        Task t2 = new Task();
-        t2.setId(task.getId());
-        t2.setWorkflowId(task.getWorkflowId());
-        t2.setRef(task.getRef());
-        t2.setTaskName(task.getTaskName());
-        t2.setWorkflowName(task.getWorkflowName());
-        t2.setParams(task.getParams());
-        t2.setOutput(task.getOutput());
-        t2.setState(task.getState());
-        t2.setCreated(task.getCreated());
-        t2.setModified(task.getModified());
-        t2.setRetries(task.getRetries());
-        return t2;
     }
 
     public void checkChangeState(State state, State state2) {

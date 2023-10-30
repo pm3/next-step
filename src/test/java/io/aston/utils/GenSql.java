@@ -33,8 +33,8 @@ public class GenSql {
             Format format = f.getAnnotation(Format.class);
             String stype = "varchar(125)";
             boolean notNull = f.getAnnotation(Nullable.class) == null;
-            if (ft.equals(int.class)) stype = "integer";
-            if (ft.equals(Integer.class)) stype = "integer";
+            if (ft.equals(int.class) || ft.equals(Integer.class)) stype = "integer";
+            if (ft.equals(long.class) || ft.equals(Long.class)) stype = "bigint";
             if (ft.equals(double.class)) stype = "decimal(5,4)";
             if (ft.equals(Double.class)) stype = "decimal(5,4)";
             if (ft.equals(Instant.class)) stype = "timestamp with time zone";

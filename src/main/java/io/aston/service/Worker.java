@@ -1,7 +1,6 @@
 package io.aston.service;
 
-import io.aston.model.Task;
-import io.micronaut.http.HttpResponse;
+import io.aston.entity.TaskEntity;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -9,9 +8,9 @@ public class Worker {
     private final String taskName;
     private final String workerName;
     private final String wid;
-    private CompletableFuture<HttpResponse<Task>> future;
+    private CompletableFuture<TaskEntity> future;
 
-    public Worker(String taskName, String workerName, String wid, CompletableFuture<HttpResponse<Task>> future) {
+    public Worker(String taskName, String workerName, String wid, CompletableFuture<TaskEntity> future) {
         this.taskName = taskName;
         this.workerName = workerName;
         this.wid = wid;
@@ -30,8 +29,8 @@ public class Worker {
         return wid;
     }
 
-    public synchronized CompletableFuture<HttpResponse<Task>> removeFuture() {
-        CompletableFuture<HttpResponse<Task>> f2 = future;
+    public synchronized CompletableFuture<TaskEntity> removeFuture() {
+        CompletableFuture<TaskEntity> f2 = future;
         this.future = null;
         return f2;
     }

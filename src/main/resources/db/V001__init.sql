@@ -1,4 +1,4 @@
---drop table flyway_schema_history; drop table ns_task; drop table ns_workflow; drop table ns_workflow_def;
+--drop table flyway_schema_history; drop table ns_task; drop table ns_workflow; drop table ns_meta_template; drop table ns_meta_wf;
 
 create table ns_task (
   id varchar(125) not null primary key,
@@ -11,7 +11,10 @@ create table ns_task (
   state varchar(125) not null,
   created timestamp with time zone not null,
   modified timestamp with time zone,
-  retries integer not null
+  retries integer not null,
+  runningTimeout bigint not null,
+  maxRetryCount integer not null,
+  retryWait bigint not null
 );
 
 create table ns_workflow (

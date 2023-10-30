@@ -37,10 +37,21 @@ public interface ITaskDao {
     @Query("""
             update ns_task set
             state=:newState,
+            output=:output,
             modified=:modified
             where id=:id and state=:oldState
             """)
-    int updateState(String id, State oldState, State newState, Instant modified);
+    int updateState(String id, State oldState, State newState, @Format(JsonConverterFactory.JSON) Object output, Instant modified);
+
+    @Query("""
+            update ns_task set
+            state=:newState,
+            output=null,
+            retries=retries+1
+            modified=:modified
+            where id=:id and state=:oldState and retries<maxRetryCount
+            """)
+    int updateStateAndRetry(String id, State oldState, State newState, Instant modified);
 
     @Query("""
             update ns_task set
