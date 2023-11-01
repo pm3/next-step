@@ -1,6 +1,9 @@
 package io.aston.api;
 
-import io.aston.model.*;
+import io.aston.model.Task;
+import io.aston.model.TaskCreate;
+import io.aston.model.TaskFinish;
+import io.aston.model.TaskOutput;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -36,16 +39,6 @@ public interface RuntimeApi {
             @Parameter(hidden = true) HttpRequest<?> request);
 
     @Operation(tags = {"runtime"})
-    @Get("/runtime/queues/free-workflows")
-    @ApiResponse(content = @Content(schema = @Schema(ref = "Task")), description = "200 response")
-    @ApiResponse(responseCode = "204", description = "204 empty response")
-    CompletableFuture<HttpResponse<Workflow>> queueFreeWorkflows(
-            @QueryValue List<String> workflowName,
-            @QueryValue String workerId,
-            @Nullable @QueryValue Long timeout,
-            @Parameter(hidden = true) HttpRequest<?> request);
-
-    @Operation(tags = {"runtime"})
     @Put("/runtime/tasks/{id}")
     Task changeTask(@PathVariable String id, @Body TaskOutput taskOutput);
 
@@ -56,5 +49,9 @@ public interface RuntimeApi {
     @Operation(tags = {"runtime"})
     @Get("/runtime/stat/tasks")
     List<String> statTasks();
+
+    @Operation(tags = {"runtime"})
+    @Get("/runtime/stat/finished")
+    List<String> statFinished();
 
 }

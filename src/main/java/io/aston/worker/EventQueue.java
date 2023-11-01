@@ -9,8 +9,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 @Singleton
 public class EventQueue<T> extends ABaseEvent<T, String> {
 
-    private final ConcurrentHashMap<String, BlockingQueue<T>> eventQueueMap = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<String, BlockingQueue<Worker<T>>> workerQueueMap = new ConcurrentHashMap<>();
+    protected final ConcurrentHashMap<String, BlockingQueue<T>> eventQueueMap = new ConcurrentHashMap<>();
+    protected final ConcurrentHashMap<String, BlockingQueue<Worker<T>>> workerQueueMap = new ConcurrentHashMap<>();
 
     public EventQueue(SimpleTimer timer) {
         super(timer);

@@ -42,20 +42,21 @@ public class AddWorkflow {
 //                System.out.println(workflowJson);
 //                workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
 //            }
+            for (int i = 0; i < 1000; i++) {
 
-            WorkflowCreate create = new WorkflowCreate();
-            create.setUniqueCode("aa" + System.currentTimeMillis());
-            create.setName("Workflow1");
-            create.setParams(new HashMap<>());
-            create.getParams().put("a", "a");
-            create.getParams().put("b", 1);
-            String workflowJson = add.post("http://localhost:8080/v1/workflows/", create);
-            System.out.println("create workflow ");
-            System.out.println(workflowJson);
-            workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
-            System.out.println("workflow");
-            System.out.println(add.objectMapper.writeValueAsString(workflow));
-
+                WorkflowCreate create = new WorkflowCreate();
+                create.setUniqueCode("aa" + System.currentTimeMillis());
+                create.setName("Workflow1");
+                create.setParams(new HashMap<>());
+                create.getParams().put("a", "a");
+                create.getParams().put("b", 1);
+                String workflowJson = add.post("http://localhost:8080/v1/workflows/", create);
+                System.out.println("create workflow ");
+                System.out.println(workflowJson);
+                workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
+                System.out.println("workflow");
+                System.out.println(add.objectMapper.writeValueAsString(workflow));
+            }
 
 //            String allTasks = add.get("http://localhost:8080/v1/tasks/");
 //            System.out.println("all tasks");

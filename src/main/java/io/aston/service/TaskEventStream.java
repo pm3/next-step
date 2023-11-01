@@ -1,7 +1,9 @@
 package io.aston.service;
 
 import io.aston.dao.ITaskDao;
+import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
+import io.aston.entity.WorkflowEntity;
 import io.aston.model.State;
 import io.aston.model.Task;
 import io.aston.user.UserDataException;
@@ -18,12 +20,14 @@ import java.util.Date;
 public class TaskEventStream extends EventStream<TaskEntity> {
 
     private final ITaskDao taskDao;
+    private final IWorkflowDao workflowDao;
 
     private static final Logger logger = LoggerFactory.getLogger(TaskEventStream.class);
 
-    public TaskEventStream(SimpleTimer timer, ITaskDao taskDao) {
+    public TaskEventStream(SimpleTimer timer, ITaskDao taskDao, IWorkflowDao workflowDao) {
         super(timer);
         this.taskDao = taskDao;
+        this.workflowDao = workflowDao;
     }
 
     @Override
@@ -60,6 +64,11 @@ public class TaskEventStream extends EventStream<TaskEntity> {
     @Override
     protected boolean callRunningState(TaskEntity task) {
         Instant now = Instant.now();
+        if (task.getId().equals(task.getWorkflowId())) {
+            task.setState(State.RUNNING);
+            task.setModified(now);
+            return true;
+        }
         if (taskDao.updateState(task.getId(), State.SCHEDULED, State.RUNNING, null, now) == 0) {
             logger.debug("stop running, task not scheduled " + task.getId());
             return false;
@@ -71,6 +80,14 @@ public class TaskEventStream extends EventStream<TaskEntity> {
 
     @Override
     protected void callRunningExpireState(TaskEntity task0) {
+        if (task0.getId().equals(task0.getWorkflowId())) {
+            WorkflowEntity workflow = workflowDao.loadById(task0.getWorkflowId())
+                    .orElse(null);
+            if (workflow != null && workflow.getState() == State.SCHEDULED) {
+                add(task0, task0.getTaskName());
+            }
+            return;
+        }
         String taskId = task0.getId();
         if (taskDao.updateState(taskId, State.RUNNING, State.FAILED, "timeout", Instant.now()) > 0) {
             TaskEntity task = taskDao.loadById(taskId).orElseThrow(() -> new UserDataException("task not found"));

@@ -6,7 +6,6 @@ import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
-import io.aston.service.NewWorkflowEventStream;
 import io.aston.service.NextStepService;
 import io.aston.service.TaskEventStream;
 import io.aston.service.TaskFinishEventQueue;
@@ -17,9 +16,12 @@ import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.context.event.HttpRequestTerminatedEvent;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -31,16 +33,16 @@ public class RuntimeController implements RuntimeApi, ApplicationEventListener<H
     private final ITaskDao taskDao;
     private final IWorkflowDao workflowDao;
     private final NextStepService nextStepService;
-    private final NewWorkflowEventStream newWorkflowEventStream;
     private final TaskEventStream taskEventStream;
     private final TaskFinishEventQueue taskFinishEventQueue;
     private final ConcurrentHashMap<String, Worker<?>> workerMap = new ConcurrentHashMap<>();
 
-    public RuntimeController(ITaskDao taskDao, IWorkflowDao workflowDao, NextStepService nextStepService, NewWorkflowEventStream newWorkflowEventStream, TaskEventStream taskEventStream, TaskFinishEventQueue taskFinishEventQueue) {
+    private static final Logger logger = LoggerFactory.getLogger(RuntimeController.class);
+
+    public RuntimeController(ITaskDao taskDao, IWorkflowDao workflowDao, NextStepService nextStepService, TaskEventStream taskEventStream, TaskFinishEventQueue taskFinishEventQueue) {
         this.taskDao = taskDao;
         this.workflowDao = workflowDao;
         this.nextStepService = nextStepService;
-        this.newWorkflowEventStream = newWorkflowEventStream;
         this.taskEventStream = taskEventStream;
         this.taskFinishEventQueue = taskFinishEventQueue;
     }
@@ -57,20 +59,6 @@ public class RuntimeController implements RuntimeApi, ApplicationEventListener<H
         if (timeout == null || timeout < 0 || timeout > 45) timeout = 30L;
         taskEventStream.workerCall(worker, worker.getQuery(), timeout * 1000L);
         return future.thenApply((t) -> t != null ? HttpResponse.ok(taskEventStream.toTask(t)) : HttpResponse.noContent());
-    }
-
-    @Override
-    public CompletableFuture<HttpResponse<Workflow>> queueFreeWorkflows(List<String> workflowName, String workerId, Long timeout, HttpRequest<?> request) {
-        String wid = UUID.randomUUID().toString();
-        request.setAttribute("wid", wid);
-        CompletableFuture<WorkflowEntity> future = new CompletableFuture<>();
-        if (workflowName == null || workflowName.isEmpty()) throw new UserDataException("workflowName required");
-        String[] arrWorkflowNames = workflowName.toArray(new String[0]);
-        Worker<WorkflowEntity> worker = new Worker<>(arrWorkflowNames, workerId, wid, future, workerMap);
-        if (timeout == null || timeout < 0 || timeout > 45) timeout = 30L;
-        newWorkflowEventStream.workerCall(worker, worker.getQuery(), timeout * 1000L);
-        return future.thenApply((w) ->
-                w != null ? HttpResponse.ok(newWorkflowEventStream.toWorkflow(w)) : HttpResponse.noContent());
     }
 
     @Override
@@ -129,17 +117,32 @@ public class RuntimeController implements RuntimeApi, ApplicationEventListener<H
         if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorker())) {
             throw new UserDataException("local workflow");
         }
-        if (workflow.getWorker() == null) {
+        if (workflow.getWorker() == null && workflow.getState() == State.SCHEDULED) {
             workflow.setWorker(taskCreate.getWorkerId());
             workflow.setState(State.RUNNING);
             workflow.setModified(Instant.now());
             workflowDao.updateWorker(workflow.getId(), State.RUNNING, workflow.getWorker(), workflow.getModified());
         }
-        if (!workflow.getWorker().equals(taskCreate.getWorkerId())) {
+        if (!Objects.equals(workflow.getWorker(), taskCreate.getWorkerId())) {
             throw new UserDataException("workflow run in different worker");
         }
         if (workflow.getState() != State.RUNNING) {
             throw new UserDataException("only running workflow");
+        }
+
+        if (taskCreate.getTaskName().equals("#finish")) {
+            logger.debug("#finish workflow " + taskCreate.getWorkflowId());
+            workflow.setState(State.COMPLETED);
+            workflow.setModified(Instant.now());
+            workflowDao.updateState(workflow);
+            Task task = new Task();
+            task.setId(workflow.getId());
+            task.setWorkflowId(workflow.getId());
+            task.setWorkflowName(workflow.getWorkflowName());
+            task.setState(workflow.getState());
+            task.setCreated(workflow.getCreated());
+            task.setModified(workflow.getModified());
+            return task;
         }
 
         TaskEntity newTask = new TaskEntity();
@@ -192,5 +195,10 @@ public class RuntimeController implements RuntimeApi, ApplicationEventListener<H
     @Override
     public List<String> statTasks() {
         return taskEventStream.values().stream().map(TaskEntity::getId).toList();
+    }
+
+    @Override
+    public List<String> statFinished() {
+        return taskFinishEventQueue.stat();
     }
 }
