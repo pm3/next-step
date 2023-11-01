@@ -6,104 +6,83 @@ import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
-import io.aston.service.*;
+import io.aston.service.NewWorkflowEventStream;
+import io.aston.service.NextStepService;
+import io.aston.service.TaskEventStream;
+import io.aston.service.TaskFinishEventQueue;
 import io.aston.user.UserDataException;
+import io.aston.worker.Worker;
+import io.micronaut.context.event.ApplicationEventListener;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.context.event.HttpRequestTerminatedEvent;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Controller("/v1")
-public class RuntimeController implements RuntimeApi {
+public class RuntimeController implements RuntimeApi, ApplicationEventListener<HttpRequestTerminatedEvent> {
 
     private final ITaskDao taskDao;
     private final IWorkflowDao workflowDao;
     private final NextStepService nextStepService;
-    private final RunTaskService runTaskService;
-    private final EventQueue eventQueue;
+    private final NewWorkflowEventStream newWorkflowEventStream;
+    private final TaskEventStream taskEventStream;
+    private final TaskFinishEventQueue taskFinishEventQueue;
+    private final ConcurrentHashMap<String, Worker<?>> workerMap = new ConcurrentHashMap<>();
 
-    public RuntimeController(ITaskDao taskDao, IWorkflowDao workflowDao, NextStepService nextStepService, RunTaskService runTaskService, EventQueue eventQueue) {
+    public RuntimeController(ITaskDao taskDao, IWorkflowDao workflowDao, NextStepService nextStepService, NewWorkflowEventStream newWorkflowEventStream, TaskEventStream taskEventStream, TaskFinishEventQueue taskFinishEventQueue) {
         this.taskDao = taskDao;
         this.workflowDao = workflowDao;
         this.nextStepService = nextStepService;
-        this.runTaskService = runTaskService;
-        this.eventQueue = eventQueue;
-    }
-
-    public record TaskEvent(TaskEntity task) implements IEvent {
-        @Override
-        public String getName() {
-            return task.getTaskName();
-        }
+        this.newWorkflowEventStream = newWorkflowEventStream;
+        this.taskEventStream = taskEventStream;
+        this.taskFinishEventQueue = taskFinishEventQueue;
     }
 
     @Override
-    public CompletableFuture<HttpResponse<Task>> queueNewTasks(String taskName, String workerId, Long timeout, HttpRequest<?> request) {
+    public CompletableFuture<HttpResponse<Task>> queueNewTasks(List<String> taskName, String workerId, Long timeout, HttpRequest<?> request) {
         String wid = UUID.randomUUID().toString();
         request.setAttribute("wid", wid);
-        CompletableFuture<IEvent> future = new CompletableFuture<>();
+        CompletableFuture<TaskEntity> future = new CompletableFuture<>();
 
-        Worker worker = new Worker(taskName, workerId, wid, future);
+        if (taskName == null || taskName.isEmpty()) throw new UserDataException("workflowName required");
+        String[] arrTaskNames = taskName.toArray(new String[0]);
+        Worker<TaskEntity> worker = new Worker<>(arrTaskNames, workerId, wid, future, workerMap);
         if (timeout == null || timeout < 0 || timeout > 45) timeout = 30L;
-        eventQueue.workerCall(worker, timeout * 1000L);
-        return future.thenApply((e) -> (e instanceof TaskEvent te && te.task() != null) ? HttpResponse.ok(toTask(te.task())) : HttpResponse.noContent());
-    }
-
-    private Task toTask(TaskEntity task) {
-        Task t2 = new Task();
-        t2.setId(task.getId());
-        t2.setWorkflowId(task.getWorkflowId());
-        t2.setRef(task.getRef());
-        t2.setTaskName(task.getTaskName());
-        t2.setWorkflowName(task.getWorkflowName());
-        t2.setParams(task.getParams());
-        t2.setOutput(task.getOutput());
-        t2.setState(task.getState());
-        t2.setCreated(task.getCreated());
-        t2.setModified(task.getModified());
-        t2.setRetries(task.getRetries());
-        return t2;
-    }
-
-    public record WorkflowEvent(Workflow workflow) implements IEvent {
-        @Override
-        public String getName() {
-            return workflow.getWorkflowName();
-        }
+        taskEventStream.workerCall(worker, worker.getQuery(), timeout * 1000L);
+        return future.thenApply((t) -> t != null ? HttpResponse.ok(taskEventStream.toTask(t)) : HttpResponse.noContent());
     }
 
     @Override
-    public CompletableFuture<HttpResponse<Workflow>> queueFreeWorkflows(String workflowName, String workerId, Long timeout, HttpRequest<?> request) {
+    public CompletableFuture<HttpResponse<Workflow>> queueFreeWorkflows(List<String> workflowName, String workerId, Long timeout, HttpRequest<?> request) {
         String wid = UUID.randomUUID().toString();
         request.setAttribute("wid", wid);
-        CompletableFuture<IEvent> future = new CompletableFuture<>();
-
-        Worker worker = new Worker(workflowName, workerId, wid, future);
+        CompletableFuture<WorkflowEntity> future = new CompletableFuture<>();
+        if (workflowName == null || workflowName.isEmpty()) throw new UserDataException("workflowName required");
+        String[] arrWorkflowNames = workflowName.toArray(new String[0]);
+        Worker<WorkflowEntity> worker = new Worker<>(arrWorkflowNames, workerId, wid, future, workerMap);
         if (timeout == null || timeout < 0 || timeout > 45) timeout = 30L;
-        eventQueue.workerCall(worker, timeout * 1000L);
-        return future.thenApply((e) -> (e instanceof WorkflowEvent we && we.workflow() != null) ? HttpResponse.ok(we.workflow()) : HttpResponse.noContent());
-    }
-
-    public record TaskFinishEvent(TaskFinish taskFinish) implements IEvent {
-        @Override
-        public String getName() {
-            return taskFinish.getWorkerId();
-        }
+        newWorkflowEventStream.workerCall(worker, worker.getQuery(), timeout * 1000L);
+        return future.thenApply((w) ->
+                w != null ? HttpResponse.ok(newWorkflowEventStream.toWorkflow(w)) : HttpResponse.noContent());
     }
 
     @Override
     public CompletableFuture<HttpResponse<TaskFinish>> queueFinishedTasks(String workerId, Long timeout, HttpRequest<?> request) {
         String wid = UUID.randomUUID().toString();
         request.setAttribute("wid", wid);
-        CompletableFuture<IEvent> future = new CompletableFuture<>();
+        CompletableFuture<TaskFinish> future = new CompletableFuture<>();
 
-        Worker worker = new Worker(workerId, workerId, wid, future);
+        Worker<TaskFinish> worker = new Worker<>(workerId, workerId, wid, future, workerMap);
         if (timeout == null || timeout < 0 || timeout > 45) timeout = 30L;
-        eventQueue.workerCall(worker, timeout * 1000L);
-        return future.thenApply((e) -> (e instanceof TaskFinishEvent tfe && tfe.taskFinish() != null) ? HttpResponse.ok(tfe.taskFinish()) : HttpResponse.noContent());
+        taskFinishEventQueue.workerCall(worker, worker.getQuery0(), timeout * 1000L);
+        return future.thenApply((ft) -> ft != null ? HttpResponse.ok(ft) : HttpResponse.noContent());
     }
 
     @Override
@@ -112,6 +91,7 @@ public class RuntimeController implements RuntimeApi {
                 .orElseThrow(() -> new UserDataException("task not found"));
         WorkflowEntity workflow = workflowDao.loadById(task.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
+
         if (workflow.getState() != State.RUNNING) {
             throw new UserDataException("not running workflow");
         }
@@ -122,7 +102,7 @@ public class RuntimeController implements RuntimeApi {
         taskDao.updateState(task);
 
         if (task.getState() == State.FAILED && task.getRetries() < task.getMaxRetryCount()) {
-            runTaskService.runTask(task, null);
+            taskEventStream.runTask(task);
         } else {
             if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorker())) {
                 //local workflow
@@ -134,10 +114,10 @@ public class RuntimeController implements RuntimeApi {
                 finish.setWorkerId(workflow.getWorker());
                 finish.setState(task.getState());
                 finish.setOutput(task.getOutput());
-                eventQueue.addEvent(new TaskFinishEvent(finish));
+                taskFinishEventQueue.add(finish, finish.getWorkerId());
             }
         }
-        return toTask(task);
+        return taskEventStream.toTask(task);
     }
 
     @Override
@@ -145,11 +125,21 @@ public class RuntimeController implements RuntimeApi {
 
         WorkflowEntity workflow = workflowDao.loadById(taskCreate.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
-        if (workflow.getState() != State.RUNNING) {
-            throw new UserDataException("only running workflow");
-        }
+
         if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorker())) {
             throw new UserDataException("local workflow");
+        }
+        if (workflow.getWorker() == null) {
+            workflow.setWorker(taskCreate.getWorkerId());
+            workflow.setState(State.RUNNING);
+            workflow.setModified(Instant.now());
+            workflowDao.updateWorker(workflow.getId(), State.RUNNING, workflow.getWorker(), workflow.getModified());
+        }
+        if (!workflow.getWorker().equals(taskCreate.getWorkerId())) {
+            throw new UserDataException("workflow run in different worker");
+        }
+        if (workflow.getState() != State.RUNNING) {
+            throw new UserDataException("only running workflow");
         }
 
         TaskEntity newTask = new TaskEntity();
@@ -166,8 +156,8 @@ public class RuntimeController implements RuntimeApi {
         newTask.setMaxRetryCount(taskCreate.getMaxRetryCount());
         newTask.setRetryWait(taskCreate.getRetryWait());
         taskDao.insert(newTask);
-        eventQueue.addEvent(new TaskEvent(newTask));
-        return toTask(newTask);
+        taskEventStream.add(newTask, newTask.getTaskName());
+        return taskEventStream.toTask(newTask);
     }
 
     private void checkChangeState(TaskEntity task, State newState) {
@@ -177,7 +167,7 @@ public class RuntimeController implements RuntimeApi {
         if (in(newState, State.SCHEDULED, State.RUNNING)) {
             throw new UserDataException("no change state to " + newState.name());
         }
-        if (task.getRetries() >= task.getMaxRetryCount()) {
+        if (task.getMaxRetryCount() > 0 && task.getRetries() >= task.getMaxRetryCount()) {
             throw new UserDataException("no change state, max retries");
         }
         if (!in(task.getState(), State.SCHEDULED, State.RUNNING, State.FAILED)) {
@@ -188,5 +178,19 @@ public class RuntimeController implements RuntimeApi {
     private boolean in(State s1, State... states) {
         for (State s2 : states) if (s1 == s2) return true;
         return false;
+    }
+
+    @Override
+    public void onApplicationEvent(HttpRequestTerminatedEvent event) {
+        Optional<Object> wid = event.getSource().getAttribute("wid");
+        if (wid.isPresent()) {
+            Worker<?> worker = workerMap.remove((String) wid.get());
+            if (worker != null) worker.removeFuture();
+        }
+    }
+
+    @Override
+    public List<String> statTasks() {
+        return taskEventStream.values().stream().map(TaskEntity::getId).toList();
     }
 }

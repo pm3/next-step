@@ -23,15 +23,15 @@ public class NextStepService {
 
     private final IWorkflowDao workflowDao;
     private final ITaskDao taskDao;
-    private final RunTaskService runTaskService;
+    private final TaskEventStream taskEventStream;
     private final MetaCacheService metaCacheService;
 
     private static final Logger logger = LoggerFactory.getLogger(NextStepService.class);
 
-    public NextStepService(IWorkflowDao workflowDao, ITaskDao taskDao, RunTaskService runTaskService, MetaCacheService metaCacheService) {
+    public NextStepService(IWorkflowDao workflowDao, ITaskDao taskDao, TaskEventStream taskEventStream, MetaCacheService metaCacheService) {
         this.workflowDao = workflowDao;
         this.taskDao = taskDao;
-        this.runTaskService = runTaskService;
+        this.taskEventStream = taskEventStream;
         this.metaCacheService = metaCacheService;
     }
 
@@ -97,7 +97,7 @@ public class NextStepService {
                 workflow.setState(State.RUNNING);
                 workflowDao.updateState(workflow);
             }
-            runTaskService.runTask(newTask, null);
+            taskEventStream.runTask(newTask);
         }
     }
 
@@ -161,7 +161,7 @@ public class NextStepService {
         try {
             return Ognl.getValue(expr, scope);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.debug("parse ognl error {}", e.getMessage());
             return null;
         }
     }

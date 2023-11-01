@@ -1,5 +1,6 @@
 package io.aston;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -35,16 +36,30 @@ public class AddWorkflow {
 //            System.out.println(workflowJson0);
 
             Workflow workflow = null;
-            for (int i = 0; i < 1; i++) {
-                String workflowJson = add.post("http://localhost:8080/v1/workflows/", add.workflowCreate());
-                System.out.println("create workflow " + i);
-                System.out.println(workflowJson);
-                workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
-            }
+            //            for (int i = 0; i < 100; i++) {
+//                String workflowJson = add.post("http://localhost:8080/v1/workflows/", add.workflowCreate());
+//                System.out.println("create workflow " + i);
+//                System.out.println(workflowJson);
+//                workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
+//            }
 
-            String allTasks = add.get("http://localhost:8080/v1/tasks/");
-            System.out.println("all tasks");
-            System.out.println(allTasks);
+            WorkflowCreate create = new WorkflowCreate();
+            create.setUniqueCode("aa" + System.currentTimeMillis());
+            create.setName("Workflow1");
+            create.setParams(new HashMap<>());
+            create.getParams().put("a", "a");
+            create.getParams().put("b", 1);
+            String workflowJson = add.post("http://localhost:8080/v1/workflows/", create);
+            System.out.println("create workflow ");
+            System.out.println(workflowJson);
+            workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
+            System.out.println("workflow");
+            System.out.println(add.objectMapper.writeValueAsString(workflow));
+
+
+//            String allTasks = add.get("http://localhost:8080/v1/tasks/");
+//            System.out.println("all tasks");
+//            System.out.println(allTasks);
 
             long t1 = System.currentTimeMillis();
             AtomicInteger total = new AtomicInteger();
@@ -53,19 +68,21 @@ public class AddWorkflow {
 //                }).start();
 //            }
 
-            for (int i = 0; i < 50; i++) {
-                try {
-                    worker(add, t1, total.incrementAndGet());
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+//            for (int i = 0; i < 50; i++) {
+//                try {
+//                    worker(add, t1, total.incrementAndGet());
+//                } catch (Exception e) {
+//                    e.printStackTrace();
+//                }
+//            }
+
+            Thread.sleep(5_000);
 
             String w1Out = add.get("http://localhost:8080/v1/workflows/" + workflow.getId() + "?includeTasks=true");
             System.out.println("workflow");
             System.out.println(w1Out);
 
-            String wAllOut = add.get("http://localhost:8080/v1/workflows/");
+            String wAllOut = add.get("http://localhost:8080/v1/workflows/?states=SCHEDULED&states=RUNNING&states=FATAL_ERROR");
             System.out.println("all workflows");
             System.out.println(wAllOut);
 
@@ -158,7 +175,7 @@ public class AddWorkflow {
         this.objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
     public WorkflowCreate workflowCreate() {
@@ -169,16 +186,16 @@ public class AddWorkflow {
         cr.setName("test");
         cr.setUniqueCode("test-" + DateTimeFormatter.ISO_INSTANT.format(Instant.now()));
         cr.setTasks(new ArrayList<>());
-        cr.getTasks().add(taskDef());
-        cr.getTasks().add(taskDef());
-        cr.getTasks().add(taskDef());
-        cr.getTasks().add(taskDef());
+        cr.getTasks().add(taskDef("echo"));
+        cr.getTasks().add(taskDef("echo"));
+        cr.getTasks().add(taskDef("echo2"));
+        cr.getTasks().add(taskDef("echo3"));
         return cr;
     }
 
-    public TaskDef taskDef() {
+    public TaskDef taskDef(String taskName) {
         TaskDef def = new TaskDef();
-        def.setName("echo");
+        def.setName(taskName);
         def.setParams(new HashMap<>());
         def.getParams().put("a", "${a}");
         def.getParams().put("b", "${b}");

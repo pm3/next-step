@@ -86,4 +86,11 @@ public class WorkflowEntity {
     public void setWorker(String worker) {
         this.worker = worker;
     }
+
+    @Override
+    public String toString() {
+        return "WorkflowEntity{" +
+                "id='" + id + '\'' +
+                '}';
+    }
 }

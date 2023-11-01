@@ -1,19 +1,18 @@
 package io.aston.model;
 
-import io.aston.service.IEvent;
+import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
+import io.micronaut.serde.annotation.Serdeable;
 
-public class TaskFinish implements IEvent {
+@Introspected
+@Serdeable.Deserializable
+@Serdeable.Serializable
+public class TaskFinish {
     private String taskId;
     private String workerId;
     @Nullable
     private Object output;
     private State state;
-
-    @Override
-    public String getName() {
-        return workerId;
-    }
 
     public String getTaskId() {
         return taskId;
@@ -45,5 +44,12 @@ public class TaskFinish implements IEvent {
 
     public void setState(State state) {
         this.state = state;
+    }
+
+    @Override
+    public String toString() {
+        return "TaskFinish{" +
+                "taskId='" + taskId + '\'' +
+                '}';
     }
 }

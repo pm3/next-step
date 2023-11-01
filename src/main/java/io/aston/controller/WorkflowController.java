@@ -7,12 +7,14 @@ import io.aston.dao.IWorkflowDao;
 import io.aston.entity.MetaTemplateEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
-import io.aston.service.EventQueue;
 import io.aston.service.MetaCacheService;
+import io.aston.service.NewWorkflowEventStream;
 import io.aston.service.NextStepService;
 import io.aston.user.UserDataException;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Controller;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,14 +28,16 @@ public class WorkflowController implements WorkflowApi {
     public static final String LOCAL_WORKER = "#local";
     private final IWorkflowDao workflowDao;
     private final ITaskDao taskDao;
-    private final EventQueue eventQueue;
+    private final NewWorkflowEventStream newWorkflowEventStream;
     private final NextStepService runtimeService;
     private final MetaCacheService metaCacheService;
 
-    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, EventQueue eventQueue, NextStepService runtimeService, MetaCacheService metaCacheService) {
+    private static final Logger logger = LoggerFactory.getLogger(WorkflowController.class);
+
+    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, NewWorkflowEventStream newWorkflowEventStream, NextStepService runtimeService, MetaCacheService metaCacheService) {
         this.workflowDao = workflowDao;
         this.taskDao = taskDao;
-        this.eventQueue = eventQueue;
+        this.newWorkflowEventStream = newWorkflowEventStream;
         this.runtimeService = runtimeService;
         this.metaCacheService = metaCacheService;
     }
@@ -46,17 +50,20 @@ public class WorkflowController implements WorkflowApi {
             MetaTemplateEntity def;
             if (workflowCreate.getName().contains("/")) {
                 def = metaCacheService.loadTemplateByName(workflowCreate.getName())
-                        .orElseThrow(() -> new UserDataException("invalid workflow name"));
+                        .orElse(null);
             } else {
                 def = metaCacheService.searchLatestByName(workflowCreate.getName())
-                        .orElseThrow(() -> new UserDataException("invalid workflow name"));
+                        .orElse(null);
             }
-            workflowCreate.setName(def.getName());
-            workflowCreate.setTasks(def.getData().getTasks());
-            if (workflowCreate.getUniqueCode() == null && def.getData().getUniqueCodeExpr() != null) {
+            if (def != null) {
+                workflowCreate.setName(def.getName());
+                workflowCreate.setTasks(def.getData().getTasks());
+            }
+            if (def != null && workflowCreate.getUniqueCode() == null && def.getData().getUniqueCodeExpr() != null) {
                 workflowCreate.setUniqueCode(createUniqueCode(def.getData().getUniqueCodeExpr(), now));
             }
         }
+        if (workflowCreate.getTasks() == null) workflowCreate.setTasks(new ArrayList<>());
 
         WorkflowEntity workflow = new WorkflowEntity();
         workflow.setId(UUID.randomUUID().toString());
@@ -71,19 +78,10 @@ public class WorkflowController implements WorkflowApi {
             def.setRef(++ref);
             defTasks.add(def);
         }
-        if (defTasks.size() > 0) {
+        if (!defTasks.isEmpty()) {
             workflow.setWorker(LOCAL_WORKER);
         }
         workflowDao.insert(workflow);
-
-        Workflow w2 = new Workflow();
-        w2.setId(workflow.getId());
-        w2.setUniqueCode(workflow.getUniqueCode());
-        w2.setWorkflowName(workflow.getWorkflowName());
-        w2.setCreated(workflow.getCreated());
-        w2.setState(workflow.getState());
-        w2.setParams(workflow.getParams());
-        w2.setTasks(new ArrayList<>());
 
         if (LOCAL_WORKER.equals(workflow.getWorker())) {
             //local flow
@@ -91,9 +89,9 @@ public class WorkflowController implements WorkflowApi {
             runtimeService.nextStep(workflow, null);
         } else {
             //externalFlow
-            eventQueue.addEvent(new RuntimeController.WorkflowEvent(w2));
+            newWorkflowEventStream.add(workflow, workflow.getWorkflowName());
         }
-        return w2;
+        return newWorkflowEventStream.toWorkflow(workflow);
     }
 
     private String createUniqueCode(String uniqueCodeExpr, Instant now) {

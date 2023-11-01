@@ -45,4 +45,4 @@ jackson:
 
 #logger.levels.io.micronaut.http.server: DEBUG
 #logger.levels.com.aston: DEBUG
-#logger.levels.io.aston: DEBUG
+logger.levels.io.aston: DEBUG

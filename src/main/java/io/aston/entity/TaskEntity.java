@@ -142,4 +142,11 @@ public class TaskEntity {
     public void setRetryWait(long retryWait) {
         this.retryWait = retryWait;
     }
+
+    @Override
+    public String toString() {
+        return "TaskEntity{" +
+                "id='" + id + '\'' +
+                '}';
+    }
 }

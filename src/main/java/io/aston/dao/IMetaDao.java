@@ -19,7 +19,7 @@ public interface IMetaDao {
 
     @Query("""
             select *
-            from ns_workflow_def
+            from ns_meta_template
             where latest=true
             and name like :name || '/%'
             order by created asc
@@ -29,7 +29,7 @@ public interface IMetaDao {
 
     @Query("""
             select *
-            from ns_workflow_def
+            from ns_meta_template
             where 1=1
             /** and latest = :latest */
             /** and name like :name || '/%' */

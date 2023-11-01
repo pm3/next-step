@@ -79,12 +79,19 @@ public class Workflow {
     public void setParams(Map<String, Object> params) {
         this.params = params;
     }
-    
+
     public List<Task> getTasks() {
         return tasks;
     }
 
     public void setTasks(List<Task> tasks) {
         this.tasks = tasks;
+    }
+
+    @Override
+    public String toString() {
+        return "Workflow{" +
+                "id='" + id + '\'' +
+                '}';
     }
 }

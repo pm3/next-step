@@ -25,7 +25,7 @@ create table ns_workflow (
   modified timestamp with time zone,
   state varchar(125) not null,
   params text,
-  worker varchar(125) not null
+  worker varchar(125)
 );
 
 create table ns_meta_template (
