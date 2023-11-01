@@ -3,6 +3,7 @@ package io.aston.model;
 import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import io.micronaut.core.annotation.Introspected;
+import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
 import java.time.Instant;
@@ -19,6 +20,7 @@ public class Task {
     private String workflowName;
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
+    @Nullable
     @Format(JsonConverterFactory.JSON)
     private Object output;
     private State state;

@@ -24,7 +24,6 @@ public abstract class ABaseEvent<T, Q> {
     }
 
     public void workerCall(Worker<T> worker, Q query, long timeout) {
-        logger.debug("workerCall {}", (Object) worker.getQuery());
         T event = nextEvent(query);
         if (event != null) {
             sendEvent(worker.removeFuture(), event);

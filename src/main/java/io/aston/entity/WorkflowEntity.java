@@ -14,77 +14,97 @@ public class WorkflowEntity {
     private String id;
     private String uniqueCode;
     private String workflowName;
+    private State state;
     private Instant created;
     @Nullable
     private Instant modified;
-    private State state;
     @Nullable
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
+    @Nullable
+    @Format(JsonConverterFactory.JSON)
+    private Object output;
     private String worker;
 
     public String getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public WorkflowEntity setId(String id) {
         this.id = id;
+        return this;
     }
 
     public String getUniqueCode() {
         return uniqueCode;
     }
 
-    public void setUniqueCode(String uniqueCode) {
+    public WorkflowEntity setUniqueCode(String uniqueCode) {
         this.uniqueCode = uniqueCode;
+        return this;
     }
 
     public String getWorkflowName() {
         return workflowName;
     }
 
-    public void setWorkflowName(String workflowName) {
+    public WorkflowEntity setWorkflowName(String workflowName) {
         this.workflowName = workflowName;
-    }
-
-    public Instant getCreated() {
-        return created;
-    }
-
-    public void setCreated(Instant created) {
-        this.created = created;
-    }
-
-    public Instant getModified() {
-        return modified;
-    }
-
-    public void setModified(Instant modified) {
-        this.modified = modified;
+        return this;
     }
 
     public State getState() {
         return state;
     }
 
-    public void setState(State state) {
+    public WorkflowEntity setState(State state) {
         this.state = state;
+        return this;
+    }
+
+    public Instant getCreated() {
+        return created;
+    }
+
+    public WorkflowEntity setCreated(Instant created) {
+        this.created = created;
+        return this;
+    }
+
+    public Instant getModified() {
+        return modified;
+    }
+
+    public WorkflowEntity setModified(Instant modified) {
+        this.modified = modified;
+        return this;
     }
 
     public Map<String, Object> getParams() {
         return params;
     }
 
-    public void setParams(Map<String, Object> params) {
+    public WorkflowEntity setParams(Map<String, Object> params) {
         this.params = params;
+        return this;
+    }
+
+    public Object getOutput() {
+        return output;
+    }
+
+    public WorkflowEntity setOutput(Object output) {
+        this.output = output;
+        return this;
     }
 
     public String getWorker() {
         return worker;
     }
 
-    public void setWorker(String worker) {
+    public WorkflowEntity setWorker(String worker) {
         this.worker = worker;
+        return this;
     }
 
     @Override

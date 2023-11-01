@@ -102,8 +102,8 @@ public class AddWorkflow {
             System.out.println(taskJson);
             //if (i == 1) return;
             Task task = add.objectMapper.readValue(taskJson, Task.class);
-            TaskOutput output = new TaskOutput();
-            output.setTaskId(task.getId());
+            Task output = new Task();
+            output.setId(task.getId());
             output.setOutput(task.getParams());
             if (task.getParams() != null) {
                 for (Map.Entry<String, Object> e : task.getParams().entrySet()) {

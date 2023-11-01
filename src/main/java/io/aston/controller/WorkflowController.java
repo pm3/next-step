@@ -44,6 +44,26 @@ public class WorkflowController implements WorkflowApi {
     }
 
     @Override
+    public List<Workflow> search(WorkflowQuery query) {
+        return workflowDao.selectByQuery(
+                Multi.of(query.getWorkflowNames()),
+                query.getStates() != null ? Multi.of(query.getStates().stream().map(State::name).toList()) : null,
+                query.getDateFrom(),
+                query.getDateTo()
+        );
+    }
+
+    @Override
+    public Workflow fetch(String id, @Nullable Boolean includeTasks) {
+        Workflow workflow = workflowDao.selectById(id)
+                .orElseThrow(() -> new UserDataException("not found"));
+        if (includeTasks != null && includeTasks) {
+            workflow.setTasks(taskDao.selectByWorkflow(workflow.getId()));
+        }
+        return workflow;
+    }
+
+    @Override
     public Workflow create(WorkflowCreate workflowCreate) {
 
         Instant now = Instant.now();
@@ -110,26 +130,6 @@ public class WorkflowController implements WorkflowApi {
         return uniqueCodeExpr;
     }
 
-    @Override
-    public List<Workflow> search(WorkflowQuery query) {
-        return workflowDao.selectByQuery(
-                Multi.of(query.getWorkflowNames()),
-                query.getStates() != null ? Multi.of(query.getStates().stream().map(State::name).toList()) : null,
-                query.getDateFrom(),
-                query.getDateTo()
-        );
-    }
-
-    @Override
-    public Workflow fetch(String id, @Nullable Boolean includeTasks) {
-        Workflow workflow = workflowDao.selectById(id)
-                .orElseThrow(() -> new UserDataException("not found"));
-        if (includeTasks != null && includeTasks) {
-            workflow.setTasks(taskDao.selectByWorkflow(workflow.getId()));
-        }
-        return workflow;
-    }
-
     public Workflow toWorkflow(WorkflowEntity workflow) {
         Workflow w2 = new Workflow();
         w2.setId(workflow.getId());
@@ -142,4 +142,23 @@ public class WorkflowController implements WorkflowApi {
         return w2;
     }
 
+    @Override
+    public Workflow finish(String id, Workflow workflowOutput) {
+        WorkflowEntity workflow = workflowDao.loadById(workflowOutput.getId())
+                .orElseThrow(() -> new UserDataException("workflow not found"));
+
+        if (!State.in(workflow.getState(), State.RUNNING, State.SCHEDULED)) {
+            throw new UserDataException("finish only open workflow");
+        }
+        if (!State.in(workflowOutput.getState(), State.FAILED, State.FATAL_ERROR, State.COMPLETED)) {
+            throw new UserDataException("change to only closed state");
+        }
+
+        workflow.setOutput(workflowOutput.getOutput());
+        workflow.setState(workflowOutput.getState());
+        workflow.setModified(Instant.now());
+        workflowDao.update(workflow);
+
+        return toWorkflow(workflow);
+    }
 }

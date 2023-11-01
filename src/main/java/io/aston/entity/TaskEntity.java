@@ -35,112 +35,126 @@ public class TaskEntity {
         return id;
     }
 
-    public void setId(String id) {
+    public TaskEntity setId(String id) {
         this.id = id;
+        return this;
     }
 
     public String getWorkflowId() {
         return workflowId;
     }
 
-    public void setWorkflowId(String workflowId) {
+    public TaskEntity setWorkflowId(String workflowId) {
         this.workflowId = workflowId;
+        return this;
     }
 
     public int getRef() {
         return ref;
     }
 
-    public void setRef(int ref) {
+    public TaskEntity setRef(int ref) {
         this.ref = ref;
+        return this;
     }
 
     public String getTaskName() {
         return taskName;
     }
 
-    public void setTaskName(String taskName) {
+    public TaskEntity setTaskName(String taskName) {
         this.taskName = taskName;
+        return this;
     }
 
     public String getWorkflowName() {
         return workflowName;
     }
 
-    public void setWorkflowName(String workflowName) {
+    public TaskEntity setWorkflowName(String workflowName) {
         this.workflowName = workflowName;
+        return this;
     }
 
     public Map<String, Object> getParams() {
         return params;
     }
 
-    public void setParams(Map<String, Object> params) {
+    public TaskEntity setParams(Map<String, Object> params) {
         this.params = params;
+        return this;
     }
 
     public Object getOutput() {
         return output;
     }
 
-    public void setOutput(Object output) {
+    public TaskEntity setOutput(Object output) {
         this.output = output;
+        return this;
     }
 
     public State getState() {
         return state;
     }
 
-    public void setState(State state) {
+    public TaskEntity setState(State state) {
         this.state = state;
+        return this;
     }
 
     public Instant getCreated() {
         return created;
     }
 
-    public void setCreated(Instant created) {
+    public TaskEntity setCreated(Instant created) {
         this.created = created;
+        return this;
     }
 
     public Instant getModified() {
         return modified;
     }
 
-    public void setModified(Instant modified) {
+    public TaskEntity setModified(Instant modified) {
         this.modified = modified;
+        return this;
     }
 
     public int getRetries() {
         return retries;
     }
 
-    public void setRetries(int retries) {
+    public TaskEntity setRetries(int retries) {
         this.retries = retries;
+        return this;
     }
 
     public long getRunningTimeout() {
         return runningTimeout;
     }
 
-    public void setRunningTimeout(long runningTimeout) {
+    public TaskEntity setRunningTimeout(long runningTimeout) {
         this.runningTimeout = runningTimeout;
+        return this;
     }
 
     public int getMaxRetryCount() {
         return maxRetryCount;
     }
 
-    public void setMaxRetryCount(int maxRetryCount) {
+    public TaskEntity setMaxRetryCount(int maxRetryCount) {
         this.maxRetryCount = maxRetryCount;
+        return this;
     }
 
     public long getRetryWait() {
         return retryWait;
     }
 
-    public void setRetryWait(long retryWait) {
+    public TaskEntity setRetryWait(long retryWait) {
         this.retryWait = retryWait;
+        return this;
     }
 
     @Override

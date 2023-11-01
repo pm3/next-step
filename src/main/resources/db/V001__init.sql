@@ -25,6 +25,7 @@ create table ns_workflow (
   modified timestamp with time zone,
   state varchar(125) not null,
   params text,
+  output text,
   worker varchar(125)
 );
 
