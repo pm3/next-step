@@ -12,7 +12,6 @@ import java.util.Map;
 @Serdeable.Serializable
 public class WorkflowCreate {
     private String name;
-    @Nullable
     private String uniqueCode;
     @Nullable
     private Map<String, Object> params;

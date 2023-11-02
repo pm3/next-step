@@ -6,9 +6,7 @@ import io.aston.dao.ITaskDao;
 import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
-import io.aston.model.State;
-import io.aston.model.Task;
-import io.aston.model.TaskQuery;
+import io.aston.model.*;
 import io.aston.service.NextStepService;
 import io.aston.service.TaskEventStream;
 import io.aston.service.TaskFinishEventQueue;
@@ -19,7 +17,6 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 @Controller("/v1")
@@ -57,7 +54,7 @@ public class TaskController implements TaskApi {
     }
 
     @Override
-    public Task createTask(Task taskCreate) {
+    public Task createTask(TaskCreate taskCreate) {
 
         WorkflowEntity workflow = workflowDao.loadById(taskCreate.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
@@ -71,9 +68,6 @@ public class TaskController implements TaskApi {
             workflow.setModified(Instant.now());
             workflowDao.updateState(workflow);
         }
-        if (!Objects.equals(workflow.getWorkerId(), taskCreate.getWorkerId())) {
-            throw new UserDataException("workflow run in different worker");
-        }
         if (workflow.getState() != State.RUNNING) {
             throw new UserDataException("only running workflow");
         }
@@ -81,7 +75,6 @@ public class TaskController implements TaskApi {
         TaskEntity newTask = new TaskEntity();
         newTask.setId(UUID.randomUUID().toString());
         newTask.setWorkflowId(workflow.getId());
-        newTask.setWorkerId(taskCreate.getWorkerId());
         newTask.setRef(taskCreate.getRef());
         newTask.setTaskName(taskCreate.getTaskName());
         newTask.setWorkflowName(workflow.getWorkflowName());
@@ -99,7 +92,7 @@ public class TaskController implements TaskApi {
     }
 
     @Override
-    public Task changeTask(String id, Task taskOutput) {
+    public Task finishTask(String id, TaskFinish taskFinish) {
         TaskEntity task = taskDao.loadById(id)
                 .orElseThrow(() -> new UserDataException("task not found"));
         WorkflowEntity workflow = workflowDao.loadById(task.getWorkflowId())
@@ -109,8 +102,8 @@ public class TaskController implements TaskApi {
         if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
             throw new UserDataException("local workflow");
         }
-        if (taskOutput.getWorkerId() != null && workflow.getWorkerId() == null && workflow.getState() == State.SCHEDULED) {
-            workflow.setWorkerId(taskOutput.getWorkerId());
+        if (taskFinish.getWorkerId() != null && workflow.getWorkerId() == null && workflow.getState() == State.SCHEDULED) {
+            workflow.setWorkerId(taskFinish.getWorkerId());
             workflow.setState(State.RUNNING);
             workflow.setModified(Instant.now());
             workflowDao.updateState(workflow);
@@ -119,11 +112,11 @@ public class TaskController implements TaskApi {
             throw new UserDataException("only running workflow");
         }
 
-        checkChangeState(task, taskOutput.getState());
-        task.setOutput(taskOutput.getOutput());
-        task.setState(taskOutput.getState());
+        checkChangeState(task, taskFinish.getState());
+        task.setOutput(taskFinish.getOutput());
+        task.setState(taskFinish.getState());
         task.setModified(Instant.now());
-        task.setWorkflowId(taskOutput.getWorkerId());
+        task.setWorkflowId(taskFinish.getWorkerId());
         taskDao.updateState(task);
 
         if (task.getState() == State.FAILED && task.getRetries() < task.getMaxRetryCount()) {

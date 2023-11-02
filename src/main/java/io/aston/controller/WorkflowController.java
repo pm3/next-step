@@ -64,7 +64,7 @@ public class WorkflowController implements WorkflowApi {
     }
 
     @Override
-    public Workflow create(WorkflowCreate workflowCreate) {
+    public Workflow createWorkflow(WorkflowCreate workflowCreate) {
 
         Instant now = Instant.now();
         if (workflowCreate.getTasks() == null || workflowCreate.getTasks().isEmpty()) {
@@ -143,19 +143,19 @@ public class WorkflowController implements WorkflowApi {
     }
 
     @Override
-    public Workflow finish(String id, Workflow workflowOutput) {
-        WorkflowEntity workflow = workflowDao.loadById(workflowOutput.getId())
+    public Workflow finishWorkflow(String id, WorkflowFinish workflowFinish) {
+        WorkflowEntity workflow = workflowDao.loadById(workflowFinish.getId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
 
         if (!State.in(workflow.getState(), State.RUNNING, State.SCHEDULED)) {
             throw new UserDataException("finish only open workflow");
         }
-        if (!State.in(workflowOutput.getState(), State.FAILED, State.FATAL_ERROR, State.COMPLETED)) {
+        if (!State.in(workflowFinish.getState(), State.FAILED, State.FATAL_ERROR, State.COMPLETED)) {
             throw new UserDataException("change to only closed state");
         }
 
-        workflow.setOutput(workflowOutput.getOutput());
-        workflow.setState(workflowOutput.getState());
+        workflow.setOutput(workflowFinish.getOutput());
+        workflow.setState(workflowFinish.getState());
         workflow.setModified(Instant.now());
         workflowDao.update(workflow);
 

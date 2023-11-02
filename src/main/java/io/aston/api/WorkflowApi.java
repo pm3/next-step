@@ -2,6 +2,7 @@ package io.aston.api;
 
 import io.aston.model.Workflow;
 import io.aston.model.WorkflowCreate;
+import io.aston.model.WorkflowFinish;
 import io.aston.model.WorkflowQuery;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.*;
@@ -21,9 +22,9 @@ public interface WorkflowApi {
 
     @Operation(tags = {"workflow"})
     @Post("/workflows/")
-    Workflow create(@Body WorkflowCreate workflowCreate);
+    Workflow createWorkflow(@Body WorkflowCreate workflowCreate);
 
     @Operation(tags = {"workflow"})
     @Put("/workflows/{id}")
-    Workflow finish(@PathVariable String id, @Body Workflow workflowOutput);
+    Workflow finishWorkflow(@PathVariable String id, @Body WorkflowFinish workflowFinish);
 }

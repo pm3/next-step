@@ -1,6 +1,8 @@
 package io.aston.api;
 
 import io.aston.model.Task;
+import io.aston.model.TaskCreate;
+import io.aston.model.TaskFinish;
 import io.aston.model.TaskQuery;
 import io.micronaut.http.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
@@ -19,9 +21,9 @@ public interface TaskApi {
 
     @Operation(tags = {"tasks"})
     @Post("/tasks/")
-    Task createTask(@Body Task taskCreate);
+    Task createTask(@Body TaskCreate taskCreate);
 
     @Operation(tags = {"tasks"})
     @Put("/tasks/{id}")
-    Task changeTask(@PathVariable String id, @Body Task taskOutput);
+    Task finishTask(@PathVariable String id, @Body TaskFinish taskFinish);
 }

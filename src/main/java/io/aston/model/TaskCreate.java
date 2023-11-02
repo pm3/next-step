@@ -1,7 +1,5 @@
 package io.aston.model;
 
-import com.aston.micronaut.sql.convert.JsonConverterFactory;
-import com.aston.micronaut.sql.entity.Format;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
@@ -12,35 +10,23 @@ import java.util.Map;
 @Introspected
 @Serdeable.Deserializable
 @Serdeable.Serializable
-public class Task {
-    private String id;
+public class TaskCreate {
     private String workflowId;
     @Nullable
     private String workerId;
     private int ref;
     private String taskName;
-    private String workflowName;
     @Nullable
-    @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
     @Nullable
-    @Format(JsonConverterFactory.JSON)
     private Object output;
+    @Nullable
     private State state;
+    @Nullable
     private Instant created;
-    private Instant modified;
-    private int retries;
     private long runningTimeout;
     private int maxRetryCount;
     private long retryWait;
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
 
     public String getWorkflowId() {
         return workflowId;
@@ -74,14 +60,6 @@ public class Task {
         this.taskName = taskName;
     }
 
-    public String getWorkflowName() {
-        return workflowName;
-    }
-
-    public void setWorkflowName(String workflowName) {
-        this.workflowName = workflowName;
-    }
-
     public Map<String, Object> getParams() {
         return params;
     }
@@ -112,22 +90,6 @@ public class Task {
 
     public void setCreated(Instant created) {
         this.created = created;
-    }
-
-    public Instant getModified() {
-        return modified;
-    }
-
-    public void setModified(Instant modified) {
-        this.modified = modified;
-    }
-
-    public int getRetries() {
-        return retries;
-    }
-
-    public void setRetries(int retries) {
-        this.retries = retries;
     }
 
     public long getRunningTimeout() {
