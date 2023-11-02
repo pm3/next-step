@@ -6,7 +6,6 @@ import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.State;
 import io.aston.model.Task;
-import io.aston.user.UserDataException;
 import io.aston.worker.EventStream;
 import io.aston.worker.SimpleTimer;
 import jakarta.inject.Singleton;
@@ -54,6 +53,7 @@ public class TaskEventStream extends EventStream<TaskEntity> {
     protected boolean callRunningState(TaskEntity task) {
         Instant now = Instant.now();
         if (task.getId().equals(task.getWorkflowId())) {
+            //virtual task start workflow
             task.setState(State.RUNNING);
             task.setModified(now);
             return true;
@@ -69,31 +69,24 @@ public class TaskEventStream extends EventStream<TaskEntity> {
 
     @Override
     protected void callRunningExpireState(TaskEntity task0) {
+        Instant now = Instant.now();
         if (task0.getId().equals(task0.getWorkflowId())) {
+            //virtual task start workflow
             WorkflowEntity workflow = workflowDao.loadById(task0.getWorkflowId())
                     .orElse(null);
             if (workflow != null && workflow.getState() == State.SCHEDULED) {
+                task0.setState(State.SCHEDULED);
+                task0.setModified(now);
                 add(task0, task0.getTaskName());
             }
             return;
         }
         String taskId = task0.getId();
-        if (taskDao.updateState(taskId, State.RUNNING, State.SCHEDULED, null, Instant.now()) > 0) {
-            TaskEntity task = taskDao.loadById(taskId).orElseThrow(() -> new UserDataException("task not found"));
-            if (task.getMaxRetryCount() > task.getRetries()) {
-                long retryDelay = task.getRetryWait();
-                if (retryDelay <= 0) retryDelay = 60L;
-                timer.schedule(retryDelay * 1000L, taskId, this::retryFailedTask);
-            }
-        }
-    }
-
-    private void retryFailedTask(String taskId) {
-        if (taskDao.updateStateAndRetry(taskId, State.FAILED, State.SCHEDULED, Instant.now()) > 0) {
-            TaskEntity task = taskDao.loadById(taskId).orElseThrow(() -> new UserDataException("task not found"));
-            if (task.getState() == State.SCHEDULED) {
-                add(task, task.getTaskName());
-            }
+        if (taskDao.updateStateAndRetry(taskId, State.RUNNING, State.SCHEDULED, now) > 0) {
+            task0.setState(State.SCHEDULED);
+            task0.setModified(now);
+            task0.setRetries(task0.getRetries() + 1);
+            add(task0, task0.getTaskName());
         }
     }
 
@@ -101,6 +94,7 @@ public class TaskEventStream extends EventStream<TaskEntity> {
         Task t2 = new Task();
         t2.setId(task.getId());
         t2.setWorkflowId(task.getWorkflowId());
+        t2.setWorkerId(task.getWorkerId());
         t2.setRef(task.getRef());
         t2.setTaskName(task.getTaskName());
         t2.setWorkflowName(task.getWorkflowName());
@@ -110,6 +104,8 @@ public class TaskEventStream extends EventStream<TaskEntity> {
         t2.setCreated(task.getCreated());
         t2.setModified(task.getModified());
         t2.setRetries(task.getRetries());
+        t2.setRunningTimeout(task.getRunningTimeout());
+        t2.setMaxRetryCount(task.getMaxRetryCount());
         return t2;
     }
 }

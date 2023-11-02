@@ -203,7 +203,6 @@ public class AddWorkflow {
         def.setOutputVar("$.");
         def.setTimeout(10);
         def.setRetryCount(4);
-        def.setRetryWait(3);
         return def;
     }
 

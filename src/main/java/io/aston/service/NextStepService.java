@@ -93,7 +93,6 @@ public class NextStepService {
         newTask.setRetries(0);
         newTask.setRunningTimeout(nextTaskDef.getTimeout());
         newTask.setMaxRetryCount(newTask.getMaxRetryCount());
-        newTask.setRetryWait(newTask.getRetryWait());
         taskDao.insert(newTask);
 
         taskEventStream.runTask(newTask);

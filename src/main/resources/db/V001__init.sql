@@ -14,8 +14,7 @@ create table ns_task (
   modified timestamp with time zone,
   retries integer not null,
   runningTimeout bigint not null,
-  maxRetryCount integer not null,
-  retryWait bigint not null
+  maxRetryCount integer not null
 );
 
 create table ns_workflow (

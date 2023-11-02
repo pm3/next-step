@@ -26,7 +26,6 @@ public class TaskCreate {
     private Instant created;
     private long runningTimeout;
     private int maxRetryCount;
-    private long retryWait;
 
     public String getWorkflowId() {
         return workflowId;
@@ -106,13 +105,5 @@ public class TaskCreate {
 
     public void setMaxRetryCount(int maxRetryCount) {
         this.maxRetryCount = maxRetryCount;
-    }
-
-    public long getRetryWait() {
-        return retryWait;
-    }
-
-    public void setRetryWait(long retryWait) {
-        this.retryWait = retryWait;
     }
 }

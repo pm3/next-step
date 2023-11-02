@@ -88,7 +88,6 @@ public class TaskController implements TaskApi {
         newTask.setRetries(0);
         newTask.setRunningTimeout(taskCreate.getRunningTimeout());
         newTask.setMaxRetryCount(taskCreate.getMaxRetryCount());
-        newTask.setRetryWait(taskCreate.getRetryWait());
         taskDao.insert(newTask);
         taskEventStream.runTask(newTask);
         return taskEventStream.toTask(newTask);

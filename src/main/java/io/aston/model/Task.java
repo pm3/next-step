@@ -32,7 +32,6 @@ public class Task {
     private int retries;
     private long runningTimeout;
     private int maxRetryCount;
-    private long retryWait;
 
     public String getId() {
         return id;
@@ -144,13 +143,5 @@ public class Task {
 
     public void setMaxRetryCount(int maxRetryCount) {
         this.maxRetryCount = maxRetryCount;
-    }
-
-    public long getRetryWait() {
-        return retryWait;
-    }
-
-    public void setRetryWait(long retryWait) {
-        this.retryWait = retryWait;
     }
 }

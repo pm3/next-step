@@ -16,7 +16,6 @@ public class TaskDef {
     private String outputVar;
     private int timeout;
     private int retryCount;
-    private long retryWait;
 
     public int getRef() {
         return ref;
@@ -72,13 +71,5 @@ public class TaskDef {
 
     public void setRetryCount(int retryCount) {
         this.retryCount = retryCount;
-    }
-
-    public long getRetryWait() {
-        return retryWait;
-    }
-
-    public void setRetryWait(long retryWait) {
-        this.retryWait = retryWait;
     }
 }
