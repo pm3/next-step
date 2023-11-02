@@ -6,11 +6,11 @@ import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.where.Multi;
 import io.aston.entity.WorkflowEntity;
+import io.aston.model.State;
 import io.aston.model.Workflow;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @SqlApi
@@ -28,14 +28,11 @@ public interface IWorkflowDao {
             /** ,workerId=:workerId */
             where id=:id
             """)
-    void updateState(WorkflowEntity workflow);
+    void updateState(String id, State state, Instant modified, String workerId);
 
-    @Query("""
-            update ns_workflow set
-            scope = scope::jsonb || :scope::jsonb
-            where id=:id
-            """)
-    void updateScope(String id, @Format(JsonConverterFactory.JSON) Map<String, Object> scope);
+    @Query("update ns_workflow set output=:output where id=:id")
+    void updateOutput(String id, @Format(JsonConverterFactory.JSON) Object output);
+
 
     @Query("select * from ns_workflow where id=:id")
     Optional<Workflow> selectById(String id);

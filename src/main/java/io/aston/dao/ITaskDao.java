@@ -29,7 +29,8 @@ public interface ITaskDao {
             state=:state,
             output=:output,
             retries=:retries,
-            modified=:modified
+            modified=:modified,
+            workerId=:workerId
             where id=:id
             """)
     void updateState(TaskEntity task);

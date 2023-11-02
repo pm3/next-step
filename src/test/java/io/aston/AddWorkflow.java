@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import io.aston.model.*;
 
+import java.lang.reflect.Type;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -36,13 +37,13 @@ public class AddWorkflow {
 //            System.out.println(workflowJson0);
 
             Workflow workflow = null;
-            //            for (int i = 0; i < 100; i++) {
-//                String workflowJson = add.post("http://localhost:8080/v1/workflows/", add.workflowCreate());
-//                System.out.println("create workflow " + i);
-//                System.out.println(workflowJson);
-//                workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
-//            }
-            for (int i = 0; i < 100; i++) {
+            for (int i = 0; i < 1; i++) {
+                String workflowJson = add.post("http://localhost:8080/v1/workflows/", add.workflowCreate());
+                System.out.println("create workflow " + i);
+                System.out.println(workflowJson);
+                workflow = add.parse(workflowJson, Workflow.class);
+            }
+            for (int i = 0; i < 1; i++) {
 
                 WorkflowCreate create = new WorkflowCreate();
                 create.setUniqueCode("aa" + System.currentTimeMillis());
@@ -51,11 +52,9 @@ public class AddWorkflow {
                 create.getParams().put("a", "a");
                 create.getParams().put("b", 1);
                 String workflowJson = add.post("http://localhost:8080/v1/workflows/", create);
-                System.out.println("create workflow ");
+                System.out.println("create workflow " + i);
                 System.out.println(workflowJson);
-                workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
-                System.out.println("workflow");
-                System.out.println(add.objectMapper.writeValueAsString(workflow));
+                workflow = add.parse(workflowJson, Workflow.class);
             }
 
 //            String allTasks = add.get("http://localhost:8080/v1/tasks/");
@@ -101,7 +100,7 @@ public class AddWorkflow {
             System.out.println("queue task " + i + " --- " + (System.currentTimeMillis() - t1));
             System.out.println(taskJson);
             //if (i == 1) return;
-            Task task = add.objectMapper.readValue(taskJson, Task.class);
+            Task task = add.parse(taskJson, Task.class);
             Task output = new Task();
             output.setId(task.getId());
             output.setOutput(task.getParams());
@@ -120,7 +119,7 @@ public class AddWorkflow {
 //            }
             String respOut = add.put("http://localhost:8080/v1/runtime/tasks/" + task.getId(), output);
             //System.out.println("queue task save " + i);
-            //System.out.println(add.objectMapper.writeValueAsString(output));
+            //System.out.println(json(output));
             //System.out.println(respOut);
         }
     }
@@ -191,6 +190,7 @@ public class AddWorkflow {
         cr.getTasks().add(taskDef("echo"));
         cr.getTasks().add(taskDef("echo2"));
         cr.getTasks().add(taskDef("echo3"));
+        //cr.getTasks().add(taskDef("echoFail"));
         return cr;
     }
 
@@ -205,5 +205,13 @@ public class AddWorkflow {
         def.setRetryCount(4);
         def.setRetryWait(3);
         return def;
+    }
+
+    String json(Object obj) throws Exception {
+        return objectMapper.writeValueAsString(obj);
+    }
+
+    <T> T parse(String json, Type type) throws Exception {
+        return objectMapper.readValue(json, objectMapper.constructType(type));
     }
 }

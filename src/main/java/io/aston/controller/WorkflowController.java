@@ -29,16 +29,16 @@ public class WorkflowController implements WorkflowApi {
     public static final String LOCAL_WORKER = "#local";
     private final IWorkflowDao workflowDao;
     private final ITaskDao taskDao;
-    private final NextStepService runtimeService;
+    private final NextStepService nextStepService;
     private final MetaCacheService metaCacheService;
     private final TaskEventStream taskEventStream;
 
     private static final Logger logger = LoggerFactory.getLogger(WorkflowController.class);
 
-    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, NextStepService runtimeService, MetaCacheService metaCacheService, TaskEventStream taskEventStream) {
+    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, NextStepService nextStepService, MetaCacheService metaCacheService, TaskEventStream taskEventStream) {
         this.workflowDao = workflowDao;
         this.taskDao = taskDao;
-        this.runtimeService = runtimeService;
+        this.nextStepService = nextStepService;
         this.metaCacheService = metaCacheService;
         this.taskEventStream = taskEventStream;
     }
@@ -90,7 +90,7 @@ public class WorkflowController implements WorkflowApi {
 
         if (LOCAL_WORKER.equals(workflow.getWorkerId())) {
             //local flow
-            runtimeService.nextStep(workflow, null);
+            nextStepService.nextStep(workflow, null);
         } else {
             //externalFlow
             TaskEntity task = new TaskEntity();
@@ -150,6 +150,10 @@ public class WorkflowController implements WorkflowApi {
     public Workflow finishWorkflow(String id, WorkflowFinish workflowFinish) {
         WorkflowEntity workflow = workflowDao.loadById(workflowFinish.getId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
+
+        if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
+            throw new UserDataException("local workflow");
+        }
 
         if (!State.in(workflow.getState(), State.RUNNING, State.SCHEDULED)) {
             throw new UserDataException("finish only running workflow");

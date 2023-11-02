@@ -7,6 +7,7 @@ import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
+import io.aston.service.NextStepService;
 import io.aston.service.TaskEventStream;
 import io.aston.service.TaskFinishEventQueue;
 import io.aston.user.UserDataException;
@@ -25,14 +26,16 @@ public class TaskController implements TaskApi {
     private final IWorkflowDao workflowDao;
     private final TaskEventStream taskEventStream;
     private final TaskFinishEventQueue taskFinishEventQueue;
+    private final NextStepService nextStepService;
 
     private static final Logger logger = LoggerFactory.getLogger(Task.class);
 
-    public TaskController(ITaskDao taskDao, IWorkflowDao workflowDao, TaskEventStream taskEventStream, TaskFinishEventQueue taskFinishEventQueue) {
+    public TaskController(ITaskDao taskDao, IWorkflowDao workflowDao, TaskEventStream taskEventStream, TaskFinishEventQueue taskFinishEventQueue, NextStepService nextStepService) {
         this.taskDao = taskDao;
         this.workflowDao = workflowDao;
         this.taskEventStream = taskEventStream;
         this.taskFinishEventQueue = taskFinishEventQueue;
+        this.nextStepService = nextStepService;
     }
 
     @Override
@@ -67,7 +70,7 @@ public class TaskController implements TaskApi {
             workflow.setWorkerId(taskCreate.getWorkerId());
             workflow.setState(State.RUNNING);
             workflow.setModified(Instant.now());
-            workflowDao.updateState(workflow);
+            workflowDao.updateState(workflow.getId(), workflow.getState(), workflow.getModified(), workflow.getWorkerId());
         }
         if (workflow.getState() != State.RUNNING) {
             throw new UserDataException("only running workflow");
@@ -98,10 +101,6 @@ public class TaskController implements TaskApi {
         WorkflowEntity workflow = workflowDao.loadById(task.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
 
-        if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
-            throw new UserDataException("local workflow");
-        }
-
         if (workflow.getState() != State.RUNNING) {
             throw new UserDataException("only running workflow");
         }
@@ -112,7 +111,14 @@ public class TaskController implements TaskApi {
         task.setModified(Instant.now());
         task.setWorkerId(taskFinish.getWorkerId());
         taskDao.updateState(task);
-        taskFinishEventQueue.add(task, workflow.getWorkerId());
+        if (task.getState() == State.FATAL_ERROR) {
+            workflowFatalError(workflow);
+        }
+        if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
+            nextStepService.nextStep(workflow, task);
+        } else {
+            taskFinishEventQueue.add(task, workflow.getWorkerId());
+        }
         return taskEventStream.toTask(task);
     }
 
@@ -124,4 +130,16 @@ public class TaskController implements TaskApi {
             throw new UserDataException("no change to open state - " + newState.name());
         }
     }
+
+    private void workflowFatalError(WorkflowEntity workflow) {
+        workflow.setState(State.FATAL_ERROR);
+        workflow.setModified(Instant.now());
+        workflowDao.updateState(workflow.getId(), workflow.getState(), workflow.getModified(), null);
+        taskDao.updateWorkflowAll(workflow.getId(),
+                Multi.of(List.of(State.SCHEDULED, State.RUNNING)),
+                State.FAILED,
+                "workflow FATAL_ERROR",
+                workflow.getModified());
+    }
+
 }
