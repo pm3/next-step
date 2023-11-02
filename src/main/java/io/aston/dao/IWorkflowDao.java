@@ -33,7 +33,6 @@ public interface IWorkflowDao {
     @Query("update ns_workflow set output=:output where id=:id")
     void updateOutput(String id, @Format(JsonConverterFactory.JSON) Object output);
 
-
     @Query("select * from ns_workflow where id=:id")
     Optional<Workflow> selectById(String id);
 

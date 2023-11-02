@@ -24,5 +24,4 @@ public interface MetaWorkflowApi {
 
     @Get("/meta/workflow=tasks/{id}")
     List<TaskDef> fetchWorkflowTasks(@PathVariable String id);
-
 }

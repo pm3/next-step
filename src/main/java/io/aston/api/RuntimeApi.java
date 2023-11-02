@@ -43,5 +43,4 @@ public interface RuntimeApi {
     @Operation(tags = {"runtime"})
     @Get("/runtime/stat/finished")
     List<String> statFinished();
-
 }

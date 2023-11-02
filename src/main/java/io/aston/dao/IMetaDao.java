@@ -46,5 +46,4 @@ public interface IMetaDao {
 
     @Query("select * from ns_meta_wf where workflowId=:workflowId")
     Optional<MetaWfEntity> loadMetaWfById(String workflowId);
-
 }

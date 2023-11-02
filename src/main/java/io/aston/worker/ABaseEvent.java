@@ -71,5 +71,4 @@ public abstract class ABaseEvent<T, Q> {
 
     protected void callRunningExpireState(T event) {
     }
-
 }
