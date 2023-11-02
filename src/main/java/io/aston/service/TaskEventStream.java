@@ -47,17 +47,6 @@ public class TaskEventStream extends EventStream<TaskEntity> {
             } else {
                 callRunningExpireState(task);
             }
-        } else if (task.getState() == State.FAILED) {
-            if (task.getMaxRetryCount() > task.getRetries()) {
-                long retryDelay = task.getRetryWait();
-                if (retryDelay < 0) retryDelay = 0L;
-                Date expire = new Date(Date.from(task.getModified()).getTime() + retryDelay * 1000L);
-                if (expire.after(new Date())) {
-                    timer.schedule(expire, task.getId(), this::retryFailedTask);
-                } else {
-                    retryFailedTask(task.getId());
-                }
-            }
         }
     }
 
@@ -89,7 +78,7 @@ public class TaskEventStream extends EventStream<TaskEntity> {
             return;
         }
         String taskId = task0.getId();
-        if (taskDao.updateState(taskId, State.RUNNING, State.FAILED, "timeout", Instant.now()) > 0) {
+        if (taskDao.updateState(taskId, State.RUNNING, State.SCHEDULED, null, Instant.now()) > 0) {
             TaskEntity task = taskDao.loadById(taskId).orElseThrow(() -> new UserDataException("task not found"));
             if (task.getMaxRetryCount() > task.getRetries()) {
                 long retryDelay = task.getRetryWait();
@@ -102,7 +91,9 @@ public class TaskEventStream extends EventStream<TaskEntity> {
     private void retryFailedTask(String taskId) {
         if (taskDao.updateStateAndRetry(taskId, State.FAILED, State.SCHEDULED, Instant.now()) > 0) {
             TaskEntity task = taskDao.loadById(taskId).orElseThrow(() -> new UserDataException("task not found"));
-            add(task, task.getTaskName());
+            if (task.getState() == State.SCHEDULED) {
+                add(task, task.getTaskName());
+            }
         }
     }
 
@@ -121,6 +112,4 @@ public class TaskEventStream extends EventStream<TaskEntity> {
         t2.setRetries(task.getRetries());
         return t2;
     }
-
-
 }

@@ -67,6 +67,49 @@ public class WorkflowController implements WorkflowApi {
     public Workflow createWorkflow(WorkflowCreate workflowCreate) {
 
         Instant now = Instant.now();
+        mergeWorkflowTemplate(workflowCreate, now);
+
+        WorkflowEntity workflow = new WorkflowEntity();
+        workflow.setId(UUID.randomUUID().toString());
+        workflow.setUniqueCode(workflowCreate.getUniqueCode());
+        workflow.setWorkflowName(workflowCreate.getName());
+        workflow.setCreated(now);
+        workflow.setState(State.SCHEDULED);
+        workflow.setParams(workflowCreate.getParams() != null ? workflowCreate.getParams() : new HashMap<>());
+        if (workflowCreate.getTasks() != null && !workflowCreate.getTasks().isEmpty()) {
+            workflow.setWorkerId(LOCAL_WORKER);
+            List<TaskDef> defTasks = new ArrayList<>();
+            int ref = 0;
+            for (TaskDef def : workflowCreate.getTasks()) {
+                def.setRef(++ref);
+                defTasks.add(def);
+            }
+            metaCacheService.saveWorkflowTasks(workflow.getId(), defTasks);
+        }
+        workflowDao.insert(workflow);
+
+        if (LOCAL_WORKER.equals(workflow.getWorkerId())) {
+            //local flow
+            runtimeService.nextStep(workflow, null);
+        } else {
+            //externalFlow
+            TaskEntity task = new TaskEntity();
+            task.setId(workflow.getId());
+            task.setWorkflowId(workflow.getId());
+            task.setWorkflowName(workflow.getWorkflowName());
+            task.setRef(0);
+            task.setTaskName("wf:" + workflow.getWorkflowName());
+            task.setParams(workflow.getParams());
+            task.setState(State.SCHEDULED);
+            task.setCreated(workflow.getCreated());
+            task.setRetries(0);
+            task.setRunningTimeout(60L);
+            taskEventStream.add(task, task.getTaskName());
+        }
+        return toWorkflow(workflow);
+    }
+
+    private void mergeWorkflowTemplate(WorkflowCreate workflowCreate, Instant now) {
         if (workflowCreate.getTasks() == null || workflowCreate.getTasks().isEmpty()) {
             MetaTemplateEntity def;
             if (workflowCreate.getName().contains("/")) {
@@ -84,50 +127,11 @@ public class WorkflowController implements WorkflowApi {
                 workflowCreate.setUniqueCode(createUniqueCode(def.getData().getUniqueCodeExpr(), now));
             }
         }
-        if (workflowCreate.getTasks() == null) workflowCreate.setTasks(new ArrayList<>());
-
-        WorkflowEntity workflow = new WorkflowEntity();
-        workflow.setId(UUID.randomUUID().toString());
-        workflow.setUniqueCode(workflowCreate.getUniqueCode());
-        workflow.setWorkflowName(workflowCreate.getName());
-        workflow.setCreated(now);
-        workflow.setState(State.SCHEDULED);
-        workflow.setParams(workflowCreate.getParams() != null ? workflowCreate.getParams() : new HashMap<>());
-        List<TaskDef> defTasks = new ArrayList<>();
-        int ref = 0;
-        for (TaskDef def : workflowCreate.getTasks()) {
-            def.setRef(++ref);
-            defTasks.add(def);
-        }
-        if (!defTasks.isEmpty()) {
-            workflow.setWorkerId(LOCAL_WORKER);
-        }
-        workflowDao.insert(workflow);
-
-        if (LOCAL_WORKER.equals(workflow.getWorkerId())) {
-            //local flow
-            metaCacheService.saveWorkflowTasks(workflow.getId(), defTasks);
-            runtimeService.nextStep(workflow, null);
-        } else {
-            //externalFlow
-            TaskEntity task = new TaskEntity();
-            task.setId(workflow.getId());
-            task.setWorkflowId(workflow.getId());
-            task.setRef(0);
-            task.setTaskName("wf:" + workflow.getWorkflowName());
-            task.setWorkflowName(workflow.getWorkflowName());
-            task.setParams(workflow.getParams());
-            task.setState(State.SCHEDULED);
-            task.setCreated(workflow.getCreated());
-            task.setRetries(0);
-            task.setRunningTimeout(60L);
-            taskEventStream.add(task, task.getTaskName());
-        }
-        return toWorkflow(workflow);
     }
 
     private String createUniqueCode(String uniqueCodeExpr, Instant now) {
-        return uniqueCodeExpr;
+        //TODO createUniqueCode
+        return uniqueCodeExpr + now;
     }
 
     public Workflow toWorkflow(WorkflowEntity workflow) {
@@ -148,16 +152,20 @@ public class WorkflowController implements WorkflowApi {
                 .orElseThrow(() -> new UserDataException("workflow not found"));
 
         if (!State.in(workflow.getState(), State.RUNNING, State.SCHEDULED)) {
-            throw new UserDataException("finish only open workflow");
+            throw new UserDataException("finish only running workflow");
         }
         if (!State.in(workflowFinish.getState(), State.FAILED, State.FATAL_ERROR, State.COMPLETED)) {
             throw new UserDataException("change to only closed state");
         }
-
         workflow.setOutput(workflowFinish.getOutput());
         workflow.setState(workflowFinish.getState());
         workflow.setModified(Instant.now());
         workflowDao.update(workflow);
+        taskDao.updateWorkflowAll(workflow.getId(),
+                Multi.of(List.of(State.SCHEDULED, State.RUNNING)),
+                State.FAILED,
+                "workflow " + workflow.getState().name(),
+                workflow.getModified());
 
         return toWorkflow(workflow);
     }
