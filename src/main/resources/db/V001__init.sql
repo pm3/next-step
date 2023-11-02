@@ -3,6 +3,7 @@
 create table ns_task (
   id varchar(125) not null primary key,
   workflowId varchar(125) not null,
+  workerId varchar(125),
   ref integer not null,
   taskName varchar(125) not null,
   workflowName varchar(125) not null,
@@ -26,7 +27,7 @@ create table ns_workflow (
   state varchar(125) not null,
   params text,
   output text,
-  worker varchar(125)
+  workerId varchar(125)
 );
 
 create table ns_meta_template (

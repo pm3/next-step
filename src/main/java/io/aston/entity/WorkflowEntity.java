@@ -24,87 +24,79 @@ public class WorkflowEntity {
     @Nullable
     @Format(JsonConverterFactory.JSON)
     private Object output;
-    private String worker;
+    @Nullable
+    private String workerId;
 
     public String getId() {
         return id;
     }
 
-    public WorkflowEntity setId(String id) {
+    public void setId(String id) {
         this.id = id;
-        return this;
     }
 
     public String getUniqueCode() {
         return uniqueCode;
     }
 
-    public WorkflowEntity setUniqueCode(String uniqueCode) {
+    public void setUniqueCode(String uniqueCode) {
         this.uniqueCode = uniqueCode;
-        return this;
     }
 
     public String getWorkflowName() {
         return workflowName;
     }
 
-    public WorkflowEntity setWorkflowName(String workflowName) {
+    public void setWorkflowName(String workflowName) {
         this.workflowName = workflowName;
-        return this;
     }
 
     public State getState() {
         return state;
     }
 
-    public WorkflowEntity setState(State state) {
+    public void setState(State state) {
         this.state = state;
-        return this;
     }
 
     public Instant getCreated() {
         return created;
     }
 
-    public WorkflowEntity setCreated(Instant created) {
+    public void setCreated(Instant created) {
         this.created = created;
-        return this;
     }
 
     public Instant getModified() {
         return modified;
     }
 
-    public WorkflowEntity setModified(Instant modified) {
+    public void setModified(Instant modified) {
         this.modified = modified;
-        return this;
     }
 
     public Map<String, Object> getParams() {
         return params;
     }
 
-    public WorkflowEntity setParams(Map<String, Object> params) {
+    public void setParams(Map<String, Object> params) {
         this.params = params;
-        return this;
     }
 
     public Object getOutput() {
         return output;
     }
 
-    public WorkflowEntity setOutput(Object output) {
+    public void setOutput(Object output) {
         this.output = output;
-        return this;
     }
 
-    public String getWorker() {
-        return worker;
+    public String getWorkerId() {
+        return workerId;
     }
 
-    public WorkflowEntity setWorker(String worker) {
-        this.worker = worker;
-        return this;
+    public void setWorkerId(String workerId) {
+        this.workerId = workerId;
     }
 
     @Override

@@ -42,7 +42,7 @@ public class AddWorkflow {
 //                System.out.println(workflowJson);
 //                workflow = add.objectMapper.readValue(workflowJson, Workflow.class);
 //            }
-            for (int i = 0; i < 1000; i++) {
+            for (int i = 0; i < 100; i++) {
 
                 WorkflowCreate create = new WorkflowCreate();
                 create.setUniqueCode("aa" + System.currentTimeMillis());

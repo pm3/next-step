@@ -3,7 +3,6 @@ package io.aston.controller;
 import io.aston.api.RuntimeApi;
 import io.aston.entity.TaskEntity;
 import io.aston.model.Task;
-import io.aston.model.TaskFinish;
 import io.aston.service.TaskEventStream;
 import io.aston.service.TaskFinishEventQueue;
 import io.aston.user.UserDataException;
@@ -51,15 +50,15 @@ public class RuntimeController implements RuntimeApi, ApplicationEventListener<H
     }
 
     @Override
-    public CompletableFuture<HttpResponse<TaskFinish>> queueFinishedTasks(String workerId, Long timeout, HttpRequest<?> request) {
+    public CompletableFuture<HttpResponse<Task>> queueFinishedTasks(String workerId, Long timeout, HttpRequest<?> request) {
         String wid = UUID.randomUUID().toString();
         request.setAttribute("wid", wid);
-        CompletableFuture<TaskFinish> future = new CompletableFuture<>();
+        CompletableFuture<TaskEntity> future = new CompletableFuture<>();
 
-        Worker<TaskFinish> worker = new Worker<>(workerId, workerId, wid, future, workerMap);
+        Worker<TaskEntity> worker = new Worker<>(workerId, workerId, wid, future, workerMap);
         if (timeout == null || timeout < 0 || timeout > 45) timeout = 30L;
         taskFinishEventQueue.workerCall(worker, worker.getQuery0(), timeout * 1000L);
-        return future.thenApply((ft) -> ft != null ? HttpResponse.ok(ft) : HttpResponse.noContent());
+        return future.thenApply((ft) -> ft != null ? HttpResponse.ok(taskEventStream.toTask(ft)) : HttpResponse.noContent());
     }
 
     @Override

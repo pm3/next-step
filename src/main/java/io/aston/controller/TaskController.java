@@ -6,7 +6,9 @@ import io.aston.dao.ITaskDao;
 import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
-import io.aston.model.*;
+import io.aston.model.State;
+import io.aston.model.Task;
+import io.aston.model.TaskQuery;
 import io.aston.service.NextStepService;
 import io.aston.service.TaskEventStream;
 import io.aston.service.TaskFinishEventQueue;
@@ -55,21 +57,21 @@ public class TaskController implements TaskApi {
     }
 
     @Override
-    public Task createTask(TaskCreate taskCreate) {
+    public Task createTask(Task taskCreate) {
 
         WorkflowEntity workflow = workflowDao.loadById(taskCreate.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
 
-        if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorker())) {
+        if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
             throw new UserDataException("local workflow");
         }
-        if (workflow.getWorker() == null && workflow.getState() == State.SCHEDULED) {
-            workflow.setWorker(taskCreate.getWorkerId());
+        if (workflow.getWorkerId() == null && workflow.getState() == State.SCHEDULED) {
+            workflow.setWorkerId(taskCreate.getWorkerId());
             workflow.setState(State.RUNNING);
             workflow.setModified(Instant.now());
-            workflowDao.updateWorker(workflow.getId(), State.RUNNING, workflow.getWorker(), workflow.getModified());
+            workflowDao.updateState(workflow);
         }
-        if (!Objects.equals(workflow.getWorker(), taskCreate.getWorkerId())) {
+        if (!Objects.equals(workflow.getWorkerId(), taskCreate.getWorkerId())) {
             throw new UserDataException("workflow run in different worker");
         }
         if (workflow.getState() != State.RUNNING) {
@@ -79,12 +81,14 @@ public class TaskController implements TaskApi {
         TaskEntity newTask = new TaskEntity();
         newTask.setId(UUID.randomUUID().toString());
         newTask.setWorkflowId(workflow.getId());
+        newTask.setWorkerId(taskCreate.getWorkerId());
         newTask.setRef(taskCreate.getRef());
         newTask.setTaskName(taskCreate.getTaskName());
         newTask.setWorkflowName(workflow.getWorkflowName());
         newTask.setParams(taskCreate.getParams());
-        newTask.setState(State.SCHEDULED);
+        newTask.setState(taskCreate.getState() != null && State.in(taskCreate.getState(), State.FAILED, State.COMPLETED, State.FATAL_ERROR) ? taskCreate.getState() : State.SCHEDULED);
         newTask.setCreated(Instant.now());
+        newTask.setModified(newTask.getCreated());
         newTask.setRetries(0);
         newTask.setRunningTimeout(taskCreate.getRunningTimeout());
         newTask.setMaxRetryCount(taskCreate.getMaxRetryCount());
@@ -101,34 +105,41 @@ public class TaskController implements TaskApi {
         WorkflowEntity workflow = workflowDao.loadById(task.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
 
-        if (workflow.getState() != State.RUNNING) {
-            throw new UserDataException("not running workflow");
+
+        if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
+            throw new UserDataException("local workflow");
         }
+        if (taskOutput.getWorkerId() != null && workflow.getWorkerId() == null && workflow.getState() == State.SCHEDULED) {
+            workflow.setWorkerId(taskOutput.getWorkerId());
+            workflow.setState(State.RUNNING);
+            workflow.setModified(Instant.now());
+            workflowDao.updateState(workflow);
+        }
+        if (workflow.getState() != State.RUNNING) {
+            throw new UserDataException("only running workflow");
+        }
+
         checkChangeState(task, taskOutput.getState());
         task.setOutput(taskOutput.getOutput());
         task.setState(taskOutput.getState());
         task.setModified(Instant.now());
+        task.setWorkflowId(taskOutput.getWorkerId());
         taskDao.updateState(task);
 
         if (task.getState() == State.FAILED && task.getRetries() < task.getMaxRetryCount()) {
             taskEventStream.runTask(task);
         } else {
-            if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorker())) {
+            if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
                 //local workflow
                 nextStepService.nextStep(workflow, task);
             } else {
                 //external workflow
-                TaskFinish finish = new TaskFinish();
-                finish.setTaskId(task.getId());
-                finish.setWorkerId(workflow.getWorker());
-                finish.setState(task.getState());
-                finish.setOutput(task.getOutput());
-                taskFinishEventQueue.add(finish, finish.getWorkerId());
+                taskFinishEventQueue.add(task, workflow.getWorkerId());
             }
         }
         return taskEventStream.toTask(task);
     }
-    
+
     private void checkChangeState(TaskEntity task, State newState) {
         if (State.in(task.getState(), State.FATAL_ERROR, State.COMPLETED)) {
             throw new UserDataException("no change final state " + task.getState());

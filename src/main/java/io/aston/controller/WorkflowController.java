@@ -100,11 +100,11 @@ public class WorkflowController implements WorkflowApi {
             defTasks.add(def);
         }
         if (!defTasks.isEmpty()) {
-            workflow.setWorker(LOCAL_WORKER);
+            workflow.setWorkerId(LOCAL_WORKER);
         }
         workflowDao.insert(workflow);
 
-        if (LOCAL_WORKER.equals(workflow.getWorker())) {
+        if (LOCAL_WORKER.equals(workflow.getWorkerId())) {
             //local flow
             metaCacheService.saveWorkflowTasks(workflow.getId(), defTasks);
             runtimeService.nextStep(workflow, null);

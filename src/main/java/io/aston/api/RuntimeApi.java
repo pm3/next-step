@@ -1,7 +1,6 @@
 package io.aston.api;
 
 import io.aston.model.Task;
-import io.aston.model.TaskFinish;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -32,11 +31,11 @@ public interface RuntimeApi {
     @Get("/runtime/queues/finished-tasks")
     @ApiResponse(content = @Content(schema = @Schema(ref = "Task")), description = "200 response")
     @ApiResponse(responseCode = "204", description = "204 empty response")
-    CompletableFuture<HttpResponse<TaskFinish>> queueFinishedTasks(
+    CompletableFuture<HttpResponse<Task>> queueFinishedTasks(
             @QueryValue String workerId,
             @Nullable @QueryValue Long timeout,
             @Parameter(hidden = true) HttpRequest<?> request);
-    
+
     @Operation(tags = {"runtime"})
     @Get("/runtime/stat/tasks")
     List<String> statTasks();

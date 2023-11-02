@@ -25,6 +25,8 @@ public class Workflow {
     @Nullable
     @Format(JsonConverterFactory.JSON)
     private Object output;
+    @Nullable
+    private String workerId;
     @Format(JsonConverterFactory.JSON)
     private List<Task> tasks;
 
@@ -32,81 +34,80 @@ public class Workflow {
         return id;
     }
 
-    public Workflow setId(String id) {
+    public void setId(String id) {
         this.id = id;
-        return this;
     }
 
     public String getUniqueCode() {
         return uniqueCode;
     }
 
-    public Workflow setUniqueCode(String uniqueCode) {
+    public void setUniqueCode(String uniqueCode) {
         this.uniqueCode = uniqueCode;
-        return this;
     }
 
     public String getWorkflowName() {
         return workflowName;
     }
 
-    public Workflow setWorkflowName(String workflowName) {
+    public void setWorkflowName(String workflowName) {
         this.workflowName = workflowName;
-        return this;
     }
 
     public Instant getCreated() {
         return created;
     }
 
-    public Workflow setCreated(Instant created) {
+    public void setCreated(Instant created) {
         this.created = created;
-        return this;
     }
 
     public Instant getModified() {
         return modified;
     }
 
-    public Workflow setModified(Instant modified) {
+    public void setModified(Instant modified) {
         this.modified = modified;
-        return this;
     }
 
     public State getState() {
         return state;
     }
 
-    public Workflow setState(State state) {
+    public void setState(State state) {
         this.state = state;
-        return this;
     }
 
     public Map<String, Object> getParams() {
         return params;
     }
 
-    public Workflow setParams(Map<String, Object> params) {
+    public void setParams(Map<String, Object> params) {
         this.params = params;
-        return this;
     }
 
     public Object getOutput() {
         return output;
     }
 
-    public Workflow setOutput(Object output) {
+    public void setOutput(Object output) {
         this.output = output;
-        return this;
+    }
+
+    public String getWorkerId() {
+        return workerId;
+    }
+
+    public void setWorkerId(String workerId) {
+        this.workerId = workerId;
     }
 
     public List<Task> getTasks() {
         return tasks;
     }
 
-    public Workflow setTasks(List<Task> tasks) {
+    public void setTasks(List<Task> tasks) {
         this.tasks = tasks;
-        return this;
     }
 
     public String toString() {

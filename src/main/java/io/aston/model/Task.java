@@ -15,6 +15,8 @@ import java.util.Map;
 public class Task {
     private String id;
     private String workflowId;
+    @Nullable
+    private String workerId;
     private int ref;
     private String taskName;
     private String workflowName;
@@ -27,6 +29,9 @@ public class Task {
     private Instant created;
     private Instant modified;
     private int retries;
+    private long runningTimeout;
+    private int maxRetryCount;
+    private long retryWait;
 
     public String getId() {
         return id;
@@ -42,6 +47,14 @@ public class Task {
 
     public void setWorkflowId(String workflowId) {
         this.workflowId = workflowId;
+    }
+
+    public String getWorkerId() {
+        return workerId;
+    }
+
+    public void setWorkerId(String workerId) {
+        this.workerId = workerId;
     }
 
     public int getRef() {
@@ -114,5 +127,29 @@ public class Task {
 
     public void setRetries(int retries) {
         this.retries = retries;
+    }
+
+    public long getRunningTimeout() {
+        return runningTimeout;
+    }
+
+    public void setRunningTimeout(long runningTimeout) {
+        this.runningTimeout = runningTimeout;
+    }
+
+    public int getMaxRetryCount() {
+        return maxRetryCount;
+    }
+
+    public void setMaxRetryCount(int maxRetryCount) {
+        this.maxRetryCount = maxRetryCount;
+    }
+
+    public long getRetryWait() {
+        return retryWait;
+    }
+
+    public void setRetryWait(long retryWait) {
+        this.retryWait = retryWait;
     }
 }
