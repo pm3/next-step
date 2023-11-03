@@ -103,7 +103,7 @@ public class WorkflowController implements WorkflowApi {
             task.setState(State.SCHEDULED);
             task.setCreated(workflow.getCreated());
             task.setRetries(0);
-            task.setRunningTimeout(60L);
+            task.setRunningTimeout(-1);
             taskEventStream.add(task, task.getTaskName());
         }
         return toWorkflow(workflow);

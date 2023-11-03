@@ -36,6 +36,7 @@ public class TaskController implements TaskApi {
         this.taskEventStream = taskEventStream;
         this.taskFinishEventQueue = taskFinishEventQueue;
         this.nextStepService = nextStepService;
+        this.taskEventStream.setHandleFailedState(this::fireTaskState);
     }
 
     @Override
@@ -110,19 +111,33 @@ public class TaskController implements TaskApi {
         task.setModified(Instant.now());
         task.setWorkerId(taskFinish.getWorkerId());
         taskDao.updateState(task);
+        fireTaskState(task, workflow);
+        return taskEventStream.toTask(task);
+    }
+
+    private void fireTaskState(TaskEntity task) {
+        WorkflowEntity workflow = workflowDao.loadById(task.getWorkflowId())
+                .orElseThrow(() -> new UserDataException("workflow not found"));
+        fireTaskState(task, workflow);
+    }
+
+    private void fireTaskState(TaskEntity task, WorkflowEntity workflow) {
         if (task.getState() == State.FATAL_ERROR) {
             workflowFatalError(workflow);
         }
         if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
             nextStepService.nextStep(workflow, task);
         } else {
-            taskFinishEventQueue.add(task, workflow.getWorkerId());
+            if (task.getState() == State.RETRY) {
+                taskEventStream.runTask(task);
+            } else {
+                taskFinishEventQueue.add(task, workflow.getWorkerId());
+            }
         }
-        return taskEventStream.toTask(task);
     }
 
     private void checkChangeState(TaskEntity task, State newState) {
-        if (!State.in(task.getState(), State.SCHEDULED, State.RUNNING)) {
+        if (!State.in(task.getState(), State.SCHEDULED, State.RUNNING, State.RETRY)) {
             throw new UserDataException("no change closed task " + task.getState().name());
         }
         if (State.in(newState, State.SCHEDULED, State.RUNNING)) {
