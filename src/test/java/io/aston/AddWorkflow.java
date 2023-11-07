@@ -4,7 +4,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import io.aston.model.*;
+import io.aston.model.State;
+import io.aston.model.Task;
+import io.aston.model.Workflow;
+import io.aston.model.WorkflowCreate;
 
 import java.lang.reflect.Type;
 import java.net.URI;
@@ -13,7 +16,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -185,25 +187,7 @@ public class AddWorkflow {
         cr.getParams().put("b", 2);
         cr.setName("test");
         cr.setUniqueCode("test-" + DateTimeFormatter.ISO_INSTANT.format(Instant.now()));
-        cr.setTasks(new ArrayList<>());
-        cr.getTasks().add(taskDef("echo"));
-        cr.getTasks().add(taskDef("echo"));
-        cr.getTasks().add(taskDef("echo2"));
-        cr.getTasks().add(taskDef("echo3"));
-        //cr.getTasks().add(taskDef("echoFail"));
         return cr;
-    }
-
-    public TaskDef taskDef(String taskName) {
-        TaskDef def = new TaskDef();
-        def.setName(taskName);
-        def.setParams(new HashMap<>());
-        def.getParams().put("a", "${a}");
-        def.getParams().put("b", "${b}");
-        def.setOutputVar("$.");
-        def.setTimeout(10);
-        def.setRetryCount(4);
-        return def;
     }
 
     String json(Object obj) throws Exception {

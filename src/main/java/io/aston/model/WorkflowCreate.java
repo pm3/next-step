@@ -4,7 +4,6 @@ import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
-import java.util.List;
 import java.util.Map;
 
 @Introspected
@@ -15,8 +14,6 @@ public class WorkflowCreate {
     private String uniqueCode;
     @Nullable
     private Map<String, Object> params;
-    @Nullable
-    private List<TaskDef> tasks;
 
     public String getName() {
         return name;
@@ -40,13 +37,5 @@ public class WorkflowCreate {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
-    }
-
-    public List<TaskDef> getTasks() {
-        return tasks;
-    }
-
-    public void setTasks(List<TaskDef> tasks) {
-        this.tasks = tasks;
     }
 }

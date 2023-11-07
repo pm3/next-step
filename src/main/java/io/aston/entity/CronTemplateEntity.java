@@ -1,15 +1,14 @@
-package io.aston.model;
+package io.aston.entity;
 
-import com.aston.micronaut.sql.convert.JsonConverterFactory;
-import com.aston.micronaut.sql.entity.Format;
+import com.aston.micronaut.sql.entity.Table;
 
 import java.time.Instant;
 import java.util.List;
 
-public class WorkflowTemplate {
+@Table(name = "ns_cron_template", id = "name")
+public class CronTemplateEntity {
     private String name;
     private String uniqueCodeExpr;
-    @Format(JsonConverterFactory.JSON)
     private List<String> cronExpressions;
     private Instant created;
     private Instant modified;

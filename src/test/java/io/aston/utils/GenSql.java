@@ -2,8 +2,7 @@ package io.aston.utils;
 
 import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.entity.Table;
-import io.aston.entity.MetaTemplateEntity;
-import io.aston.entity.MetaWfEntity;
+import io.aston.entity.CronTemplateEntity;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.micronaut.core.annotation.Nullable;
@@ -17,8 +16,7 @@ public class GenSql {
         StringBuilder sb = new StringBuilder();
         genSql.genClass(TaskEntity.class, sb);
         genSql.genClass(WorkflowEntity.class, sb);
-        genSql.genClass(MetaTemplateEntity.class, sb);
-        genSql.genClass(MetaWfEntity.class, sb);
+        genSql.genClass(CronTemplateEntity.class, sb);
         System.out.println(sb);
     }
 

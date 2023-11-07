@@ -7,7 +7,6 @@ import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
-import io.aston.service.NextStepService;
 import io.aston.service.TaskEventStream;
 import io.aston.service.TaskFinishEventQueue;
 import io.aston.user.UserDataException;
@@ -26,16 +25,14 @@ public class TaskController implements TaskApi {
     private final IWorkflowDao workflowDao;
     private final TaskEventStream taskEventStream;
     private final TaskFinishEventQueue taskFinishEventQueue;
-    private final NextStepService nextStepService;
 
     private static final Logger logger = LoggerFactory.getLogger(Task.class);
 
-    public TaskController(ITaskDao taskDao, IWorkflowDao workflowDao, TaskEventStream taskEventStream, TaskFinishEventQueue taskFinishEventQueue, NextStepService nextStepService) {
+    public TaskController(ITaskDao taskDao, IWorkflowDao workflowDao, TaskEventStream taskEventStream, TaskFinishEventQueue taskFinishEventQueue) {
         this.taskDao = taskDao;
         this.workflowDao = workflowDao;
         this.taskEventStream = taskEventStream;
         this.taskFinishEventQueue = taskFinishEventQueue;
-        this.nextStepService = nextStepService;
         this.taskEventStream.setHandleFailedState(this::fireTaskState);
     }
 
@@ -59,10 +56,6 @@ public class TaskController implements TaskApi {
 
         WorkflowEntity workflow = workflowDao.loadById(taskCreate.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
-
-        if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
-            throw new UserDataException("local workflow");
-        }
 
         if (workflow.getState() == State.SCHEDULED) {
             if (taskCreate.getWorkerId() == null) {
@@ -125,14 +118,10 @@ public class TaskController implements TaskApi {
         if (task.getState() == State.FATAL_ERROR) {
             workflowFatalError(workflow);
         }
-        if (WorkflowController.LOCAL_WORKER.equals(workflow.getWorkerId())) {
-            nextStepService.nextStep(workflow, task);
+        if (task.getState() == State.RETRY) {
+            taskEventStream.runTask(task);
         } else {
-            if (task.getState() == State.RETRY) {
-                taskEventStream.runTask(task);
-            } else {
-                taskFinishEventQueue.add(task, workflow.getWorkerId());
-            }
+            taskFinishEventQueue.add(task, workflow.getWorkerId());
         }
     }
 
