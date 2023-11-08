@@ -54,7 +54,8 @@ public class EventQueue<T> extends ABaseEvent<T, String> {
         while (!workerQueue.isEmpty()) {
             Worker<T> worker = workerQueue.poll();
             if (worker != null) {
-                return worker.copyAndRemoveFuture();
+                Worker<T> worker1 = worker.copyAndRemoveFuture();
+                if (worker1 != null) return worker1;
             }
         }
         return null;

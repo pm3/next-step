@@ -10,15 +10,18 @@ import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
 import io.aston.service.TaskEventStream;
+import io.aston.service.WorkerFinishWait;
 import io.aston.user.UserDataException;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.Controller;
+import io.micronaut.http.annotation.QueryValue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 
 @Controller("/v1")
 public class WorkflowController implements WorkflowApi {
@@ -27,14 +30,16 @@ public class WorkflowController implements WorkflowApi {
     private final ITaskDao taskDao;
     private final IMetaDao metaDao;
     private final TaskEventStream taskEventStream;
+    private final WorkerFinishWait workerFinishWait;
 
     private static final Logger logger = LoggerFactory.getLogger(WorkflowController.class);
 
-    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, IMetaDao metaDao, TaskEventStream taskEventStream) {
+    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, IMetaDao metaDao, TaskEventStream taskEventStream, WorkerFinishWait workerFinishWait) {
         this.workflowDao = workflowDao;
         this.taskDao = taskDao;
         this.metaDao = metaDao;
         this.taskEventStream = taskEventStream;
+        this.workerFinishWait = workerFinishWait;
     }
 
     @Override
@@ -58,7 +63,7 @@ public class WorkflowController implements WorkflowApi {
     }
 
     @Override
-    public Workflow createWorkflow(WorkflowCreate workflowCreate) {
+    public CompletableFuture<Workflow> createWorkflow(WorkflowCreate workflowCreate, @Nullable @QueryValue Integer timeout) {
 
         Instant now = Instant.now();
         WorkflowEntity workflow = new WorkflowEntity();
@@ -79,7 +84,12 @@ public class WorkflowController implements WorkflowApi {
         workflowDao.insert(workflow);
         TaskEntity task = createWorkflowTask(workflow);
         taskEventStream.add(task, task.getTaskName());
-        return toWorkflow(workflow);
+        if (timeout != null && timeout > 0 && timeout <= 55) {
+            CompletableFuture<WorkflowEntity> future = new CompletableFuture<>();
+            workerFinishWait.add(workflow, timeout * 1000L, future);
+            return future.thenApply(this::toWorkflow);
+        }
+        return CompletableFuture.completedFuture(toWorkflow(workflow));
     }
 
     private static TaskEntity createWorkflowTask(WorkflowEntity workflow) {
@@ -124,7 +134,7 @@ public class WorkflowController implements WorkflowApi {
                 State.FAILED,
                 "workflow finish " + workflow.getState().name(),
                 workflow.getModified());
-
+        workerFinishWait.finished(workflow);
         return toWorkflow(workflow);
     }
 

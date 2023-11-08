@@ -8,6 +8,7 @@ import java.util.List;
 
 public class WorkflowTemplate {
     private String name;
+    private String description;
     private String uniqueCodeExpr;
     @Format(JsonConverterFactory.JSON)
     private List<String> cronExpressions;
@@ -20,6 +21,14 @@ public class WorkflowTemplate {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public String getUniqueCodeExpr() {

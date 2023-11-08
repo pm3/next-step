@@ -1,7 +1,6 @@
 package io.aston.service;
 
 import io.aston.dao.ITaskDao;
-import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.model.State;
 import io.aston.model.Task;
@@ -20,15 +19,13 @@ import java.util.function.Consumer;
 public class TaskEventStream extends EventStream<TaskEntity> {
 
     private final ITaskDao taskDao;
-    private final IWorkflowDao workflowDao;
     private Consumer<TaskEntity> handleFailedState;
 
     private static final Logger logger = LoggerFactory.getLogger(TaskEventStream.class);
 
-    public TaskEventStream(SimpleTimer timer, ITaskDao taskDao, IWorkflowDao workflowDao) {
+    public TaskEventStream(SimpleTimer timer, ITaskDao taskDao) {
         super(timer);
         this.taskDao = taskDao;
-        this.workflowDao = workflowDao;
     }
 
     public void setHandleFailedState(Consumer<TaskEntity> handleFailedState) {
@@ -37,7 +34,7 @@ public class TaskEventStream extends EventStream<TaskEntity> {
 
     @Override
     protected long eventRunTimeout(TaskEntity task) {
-        return task.getRunningTimeout() * 1000;
+        return task.getRunningTimeout() * 1000L;
     }
 
     public void runTask(TaskEntity task) {

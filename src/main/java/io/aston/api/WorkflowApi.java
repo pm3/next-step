@@ -9,6 +9,7 @@ import io.micronaut.http.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public interface WorkflowApi {
 
@@ -22,7 +23,7 @@ public interface WorkflowApi {
 
     @Operation(tags = {"workflow"})
     @Post("/workflows/")
-    Workflow createWorkflow(@Body WorkflowCreate workflowCreate);
+    CompletableFuture<Workflow> createWorkflow(@Body WorkflowCreate workflowCreate, @Nullable @QueryValue Integer timeout);
 
     @Operation(tags = {"workflow"})
     @Put("/workflows/{id}")

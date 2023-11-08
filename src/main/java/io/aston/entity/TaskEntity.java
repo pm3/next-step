@@ -157,6 +157,7 @@ public class TaskEntity {
     public String toString() {
         return "TaskEntity{" +
                 "id='" + id + '\'' +
+                ",taskName='" + taskName + '\'' +
                 '}';
     }
 }
