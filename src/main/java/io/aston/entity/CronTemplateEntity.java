@@ -1,5 +1,7 @@
 package io.aston.entity;
 
+import com.aston.micronaut.sql.convert.JsonConverterFactory;
+import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.entity.Table;
 
 import java.time.Instant;
@@ -8,7 +10,9 @@ import java.util.List;
 @Table(name = "ns_cron_template", id = "name")
 public class CronTemplateEntity {
     private String name;
+    private String description;
     private String uniqueCodeExpr;
+    @Format(JsonConverterFactory.JSON)
     private List<String> cronExpressions;
     private Instant created;
     private Instant modified;
@@ -19,6 +23,14 @@ public class CronTemplateEntity {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public String getUniqueCodeExpr() {
