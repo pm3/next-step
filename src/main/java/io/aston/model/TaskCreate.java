@@ -1,5 +1,7 @@
 package io.aston.model;
 
+import com.aston.micronaut.sql.convert.JsonConverterFactory;
+import com.aston.micronaut.sql.entity.Format;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
@@ -16,8 +18,10 @@ public class TaskCreate {
     private String workerId;
     private String taskName;
     @Nullable
+    @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
     @Nullable
+    @Format(JsonConverterFactory.JSON)
     private Object output;
     @Nullable
     private State state;
@@ -42,7 +46,7 @@ public class TaskCreate {
     public void setWorkerId(String workerId) {
         this.workerId = workerId;
     }
-    
+
     public String getTaskName() {
         return taskName;
     }

@@ -115,7 +115,7 @@ public class WorkflowController implements WorkflowApi {
 
     @Override
     public Workflow finishWorkflow(String id, WorkflowFinish workflowFinish) {
-        WorkflowEntity workflow = workflowDao.loadById(workflowFinish.getId())
+        WorkflowEntity workflow = workflowDao.loadById(id)
                 .orElseThrow(() -> new UserDataException("workflow not found"));
 
         if (!State.in(workflow.getState(), State.RUNNING, State.SCHEDULED)) {
