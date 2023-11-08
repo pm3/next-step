@@ -97,7 +97,6 @@ public class WorkflowController implements WorkflowApi {
         task.setId(workflow.getId());
         task.setWorkflowId(workflow.getId());
         task.setWorkflowName(workflow.getWorkflowName());
-        task.setRef(0);
         task.setTaskName("wf:" + workflow.getWorkflowName());
         task.setParams(Map.of(
                 "uniqueCode", workflow.getUniqueCode(),

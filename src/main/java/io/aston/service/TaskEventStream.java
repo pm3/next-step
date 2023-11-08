@@ -120,7 +120,6 @@ public class TaskEventStream extends EventStream<TaskEntity> {
         t2.setId(task.getId());
         t2.setWorkflowId(task.getWorkflowId());
         t2.setWorkerId(task.getWorkerId());
-        t2.setRef(task.getRef());
         t2.setTaskName(task.getTaskName());
         t2.setWorkflowName(task.getWorkflowName());
         t2.setParams(task.getParams());

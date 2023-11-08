@@ -17,7 +17,6 @@ public class Task {
     private String workflowId;
     @Nullable
     private String workerId;
-    private int ref;
     private String taskName;
     private String workflowName;
     @Nullable
@@ -57,15 +56,7 @@ public class Task {
     public void setWorkerId(String workerId) {
         this.workerId = workerId;
     }
-
-    public int getRef() {
-        return ref;
-    }
-
-    public void setRef(int ref) {
-        this.ref = ref;
-    }
-
+    
     public String getTaskName() {
         return taskName;
     }

@@ -72,7 +72,6 @@ public class TaskController implements TaskApi {
         TaskEntity newTask = new TaskEntity();
         newTask.setId(UUID.randomUUID().toString());
         newTask.setWorkflowId(workflow.getId());
-        newTask.setRef(taskCreate.getRef());
         newTask.setTaskName(taskCreate.getTaskName());
         newTask.setWorkflowName(workflow.getWorkflowName());
         newTask.setParams(taskCreate.getParams());
