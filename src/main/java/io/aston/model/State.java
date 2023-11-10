@@ -4,6 +4,7 @@ public enum State {
     SCHEDULED,
     RUNNING,
     RETRY,
+    AWAIT,
     COMPLETED,
     FAILED,
     FATAL_ERROR;

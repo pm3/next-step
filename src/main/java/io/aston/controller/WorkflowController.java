@@ -6,10 +6,10 @@ import io.aston.dao.IMetaDao;
 import io.aston.dao.ITaskDao;
 import io.aston.dao.IWorkflowDao;
 import io.aston.entity.CronTemplateEntity;
-import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
-import io.aston.service.TaskEventStream;
+import io.aston.service.AllEventStream;
+import io.aston.service.InternalEvent;
 import io.aston.service.WorkerFinishWait;
 import io.aston.user.UserDataException;
 import io.micronaut.core.annotation.Nullable;
@@ -20,7 +20,10 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 @Controller("/v1")
@@ -29,16 +32,16 @@ public class WorkflowController implements WorkflowApi {
     private final IWorkflowDao workflowDao;
     private final ITaskDao taskDao;
     private final IMetaDao metaDao;
-    private final TaskEventStream taskEventStream;
+    private final AllEventStream eventStream;
     private final WorkerFinishWait workerFinishWait;
 
     private static final Logger logger = LoggerFactory.getLogger(WorkflowController.class);
 
-    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, IMetaDao metaDao, TaskEventStream taskEventStream, WorkerFinishWait workerFinishWait) {
+    public WorkflowController(IWorkflowDao workflowDao, ITaskDao taskDao, IMetaDao metaDao, AllEventStream eventStream, WorkerFinishWait workerFinishWait) {
         this.workflowDao = workflowDao;
         this.taskDao = taskDao;
         this.metaDao = metaDao;
-        this.taskEventStream = taskEventStream;
+        this.eventStream = eventStream;
         this.workerFinishWait = workerFinishWait;
     }
 
@@ -82,30 +85,13 @@ public class WorkflowController implements WorkflowApi {
             }
         }
         workflowDao.insert(workflow);
-        TaskEntity task = createWorkflowTask(workflow);
-        taskEventStream.add(task, task.getTaskName());
+        eventStream.add(new InternalEvent(EventType.NEW_WORKFLOW, "wf_" + workflow.getWorkflowName(), workflow, null, -1L));
         if (timeout != null && timeout > 0 && timeout <= 55) {
             CompletableFuture<WorkflowEntity> future = new CompletableFuture<>();
             workerFinishWait.add(workflow, timeout * 1000L, future);
             return future.thenApply(this::toWorkflow);
         }
         return CompletableFuture.completedFuture(toWorkflow(workflow));
-    }
-
-    private static TaskEntity createWorkflowTask(WorkflowEntity workflow) {
-        TaskEntity task = new TaskEntity();
-        task.setId(workflow.getId());
-        task.setWorkflowId(workflow.getId());
-        task.setWorkflowName(workflow.getWorkflowName());
-        task.setTaskName("wf:" + workflow.getWorkflowName());
-        task.setParams(Map.of(
-                "uniqueCode", workflow.getUniqueCode(),
-                "params", workflow.getParams()));
-        task.setState(State.SCHEDULED);
-        task.setCreated(workflow.getCreated());
-        task.setRetries(0);
-        task.setRunningTimeout(-1);
-        return task;
     }
 
     private String createUniqueCode(String uniqueCodeExpr, Instant now) {
@@ -117,6 +103,10 @@ public class WorkflowController implements WorkflowApi {
     public Workflow finishWorkflow(String id, WorkflowFinish workflowFinish) {
         WorkflowEntity workflow = workflowDao.loadById(id)
                 .orElseThrow(() -> new UserDataException("workflow not found"));
+
+        if (workflow.getState() == workflowFinish.getState()) {
+            return toWorkflow(workflow);
+        }
 
         if (!State.in(workflow.getState(), State.RUNNING, State.SCHEDULED)) {
             throw new UserDataException("finish only running workflow");

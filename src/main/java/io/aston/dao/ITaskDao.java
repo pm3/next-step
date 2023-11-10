@@ -48,7 +48,7 @@ public interface ITaskDao {
             update ns_task set
             state=:newState,
             output=null,
-            retries=retries+1
+            retries=retries+1,
             modified=:modified
             where id=:id and state=:oldState and retries<maxRetryCount
             """)

@@ -2,74 +2,78 @@ package io.aston.service;
 
 import io.aston.dao.ITaskDao;
 import io.aston.entity.TaskEntity;
-import io.aston.model.State;
-import io.aston.model.Task;
-import io.aston.worker.EventStream;
+import io.aston.entity.WorkflowEntity;
+import io.aston.model.*;
+import io.aston.worker.BaseEventStream;
 import io.aston.worker.SimpleTimer;
 import jakarta.inject.Singleton;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
 @Singleton
-public class TaskEventStream extends EventStream<TaskEntity> {
+public class AllEventStream extends BaseEventStream {
 
     private final ITaskDao taskDao;
-    private Consumer<TaskEntity> handleFailedState;
+    private Consumer<TaskEntity> handleFailedStateTask;
+    private static final Logger logger = LoggerFactory.getLogger(AllEventStream.class);
 
-    private static final Logger logger = LoggerFactory.getLogger(TaskEventStream.class);
-
-    public TaskEventStream(SimpleTimer timer, ITaskDao taskDao) {
+    public AllEventStream(SimpleTimer timer, ITaskDao taskDao) {
         super(timer);
         this.taskDao = taskDao;
     }
 
-    public void setHandleFailedState(Consumer<TaskEntity> handleFailedState) {
-        this.handleFailedState = handleFailedState;
-    }
-
-    @Override
-    protected long eventRunTimeout(TaskEntity task) {
-        return task.getRunningTimeout() * 1000L;
+    public void setHandleFailedStateTask(Consumer<TaskEntity> handleFailedStateTask) {
+        this.handleFailedStateTask = handleFailedStateTask;
     }
 
     public void runTask(TaskEntity task) {
         if (task.getState() == State.SCHEDULED) {
-            add(task, task.getTaskName());
+            add(new InternalEvent(EventType.NEW_TASK, task.getTaskName(), null, task, task.getRunningTimeout() * 1000L));
         } else if (task.getState() == State.RUNNING) {
             long timeout = task.getRunningTimeout();
             if (timeout < 0) timeout = 0L;
             Date expire = new Date(Date.from(task.getModified()).getTime() + timeout * 1000);
             if (expire.after(new Date())) {
-                timer.schedule(expire, task, this::callRunningExpireState);
+                timer.schedule(expire, task, this::callRunningExpireStateTask);
             } else {
-                callRunningExpireState(task);
+                callRunningExpireStateTask(task);
             }
         } else if (task.getState() == State.RETRY) {
             long wait = task.getRetryWait();
             if (wait < 0) wait = 0L;
             Date expire = new Date(Date.from(task.getModified()).getTime() + wait * 1000);
             if (expire.after(new Date())) {
-                timer.schedule(expire, task, this::callRetryReprocess);
+                timer.schedule(expire, task, this::callRetryReprocessTask);
             } else {
-                callRetryReprocess(task);
+                callRetryReprocessTask(task);
             }
         }
     }
 
     @Override
-    protected boolean callRunningState(TaskEntity task) {
-        Instant now = Instant.now();
-        if (task.getId().equals(task.getWorkflowId())) {
-            //virtual task start workflow
-            task.setState(State.RUNNING);
-            task.setModified(now);
-            return true;
+    protected boolean callRunningState(InternalEvent event) {
+        if (event.type() == EventType.NEW_TASK) {
+            return callRunningStateTask(event.task());
         }
+        return true;
+    }
+
+    @Override
+    protected void callRunningExpireState(InternalEvent event) {
+        if (event.type() == EventType.NEW_TASK) {
+            callRunningExpireStateTask(event.task());
+        }
+    }
+
+    protected boolean callRunningStateTask(TaskEntity task) {
+        Instant now = Instant.now();
         if (taskDao.updateState(task.getId(), State.SCHEDULED, State.RUNNING, null, now) == 0) {
             logger.debug("stop running, task not scheduled " + task.getId());
             return false;
@@ -79,29 +83,25 @@ public class TaskEventStream extends EventStream<TaskEntity> {
         return true;
     }
 
-    @Override
-    protected void callRunningExpireState(TaskEntity task0) {
-        if (task0.getId().equals(task0.getWorkflowId())) {
-            return;
-        }
+    protected void callRunningExpireStateTask(TaskEntity task0) {
         Instant now = Instant.now();
         if (taskDao.updateState(task0.getId(), State.RUNNING, State.FAILED, Map.of("type", "timeout"), now) > 0) {
             task0.setState(State.FAILED);
             task0.setModified(now);
             task0.setRetries(task0.getRetries() + 1);
-            if (handleFailedState != null) {
-                handleFailedState.accept(task0);
+            if (handleFailedStateTask != null) {
+                handleFailedStateTask.accept(task0);
             }
         }
     }
 
-    private void callRetryReprocess(TaskEntity task) {
+    private void callRetryReprocessTask(TaskEntity task) {
         Instant now = Instant.now();
         if (taskDao.updateStateAndRetry(task.getId(), State.RETRY, State.SCHEDULED, now) > 0) {
             task.setState(State.SCHEDULED);
             task.setModified(now);
             task.setRetries(task.getRetries() + 1);
-            add(task, task.getTaskName());
+            add(new InternalEvent(EventType.NEW_TASK, task.getTaskName(), null, task, task.getRunningTimeout() * 1000L));
         }
         Map<String, String> errValue = Map.of("type", "retry", "message", "max retry");
         if (taskDao.updateState(task.getId(), State.RETRY, State.FAILED, errValue, now) > 0) {
@@ -109,13 +109,22 @@ public class TaskEventStream extends EventStream<TaskEntity> {
             task.setOutput(errValue);
             task.setModified(now);
             task.setRetries(task.getRetries() + 1);
-            if (handleFailedState != null) {
-                handleFailedState.accept(task);
+            if (handleFailedStateTask != null) {
+                handleFailedStateTask.accept(task);
             }
         }
     }
 
+    public List<EventStat> stat() {
+        return null;
+    }
+
+    public Event toEvent(InternalEvent e) {
+        return new Event(e.type(), e.name(), toWorkflow(e.workflow()), toTask(e.task()));
+    }
+
     public Task toTask(TaskEntity task) {
+        if (task == null) return null;
         Task t2 = new Task();
         t2.setId(task.getId());
         t2.setWorkflowId(task.getWorkflowId());
@@ -131,5 +140,18 @@ public class TaskEventStream extends EventStream<TaskEntity> {
         t2.setRunningTimeout(task.getRunningTimeout());
         t2.setMaxRetryCount(task.getMaxRetryCount());
         return t2;
+    }
+
+    public Workflow toWorkflow(WorkflowEntity workflow) {
+        if (workflow == null) return null;
+        Workflow w2 = new Workflow();
+        w2.setId(workflow.getId());
+        w2.setUniqueCode(workflow.getUniqueCode());
+        w2.setWorkflowName(workflow.getWorkflowName());
+        w2.setCreated(workflow.getCreated());
+        w2.setState(workflow.getState());
+        w2.setParams(workflow.getParams());
+        w2.setTasks(new ArrayList<>());
+        return w2;
     }
 }

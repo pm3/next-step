@@ -7,8 +7,8 @@ import io.aston.dao.IWorkflowDao;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
-import io.aston.service.TaskEventStream;
-import io.aston.service.TaskFinishEventQueue;
+import io.aston.service.AllEventStream;
+import io.aston.service.InternalEvent;
 import io.aston.user.UserDataException;
 import io.micronaut.http.annotation.Controller;
 import org.slf4j.Logger;
@@ -23,17 +23,14 @@ public class TaskController implements TaskApi {
 
     private final ITaskDao taskDao;
     private final IWorkflowDao workflowDao;
-    private final TaskEventStream taskEventStream;
-    private final TaskFinishEventQueue taskFinishEventQueue;
-
+    private final AllEventStream eventStream;
     private static final Logger logger = LoggerFactory.getLogger(Task.class);
 
-    public TaskController(ITaskDao taskDao, IWorkflowDao workflowDao, TaskEventStream taskEventStream, TaskFinishEventQueue taskFinishEventQueue) {
+    public TaskController(ITaskDao taskDao, IWorkflowDao workflowDao, AllEventStream eventStream) {
         this.taskDao = taskDao;
         this.workflowDao = workflowDao;
-        this.taskEventStream = taskEventStream;
-        this.taskFinishEventQueue = taskFinishEventQueue;
-        this.taskEventStream.setHandleFailedState(this::fireTaskState);
+        this.eventStream = eventStream;
+        this.eventStream.setHandleFailedStateTask(this::fireTaskState);
     }
 
     @Override
@@ -82,8 +79,8 @@ public class TaskController implements TaskApi {
         newTask.setRunningTimeout(taskCreate.getRunningTimeout());
         newTask.setMaxRetryCount(taskCreate.getMaxRetryCount());
         taskDao.insert(newTask);
-        taskEventStream.runTask(newTask);
-        return taskEventStream.toTask(newTask);
+        eventStream.runTask(newTask);
+        return eventStream.toTask(newTask);
     }
 
     @Override
@@ -104,7 +101,7 @@ public class TaskController implements TaskApi {
         task.setWorkerId(taskFinish.getWorkerId());
         taskDao.updateState(task);
         fireTaskState(task, workflow);
-        return taskEventStream.toTask(task);
+        return eventStream.toTask(task);
     }
 
     private void fireTaskState(TaskEntity task) {
@@ -114,13 +111,16 @@ public class TaskController implements TaskApi {
     }
 
     private void fireTaskState(TaskEntity task, WorkflowEntity workflow) {
-        if (task.getState() == State.FATAL_ERROR) {
-            workflowFatalError(workflow);
-        }
-        if (task.getState() == State.RETRY) {
-            taskEventStream.runTask(task);
-        } else {
-            taskFinishEventQueue.add(task, workflow.getWorkerId());
+        switch (task.getState()) {
+            case AWAIT:
+                break;
+            case RETRY:
+                eventStream.runTask(task);
+                break;
+            case FATAL_ERROR:
+                workflowFatalError(workflow);
+            case COMPLETED, FAILED:
+                eventStream.add(new InternalEvent(EventType.FINISHED_TASK, workflow.getWorkerId(), null, task, -1L));
         }
     }
 

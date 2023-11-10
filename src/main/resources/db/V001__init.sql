@@ -4,7 +4,6 @@ create table ns_task (
   id varchar(125) not null primary key,
   workflowId varchar(125) not null,
   workerId varchar(125),
-  ref integer not null,
   taskName varchar(125) not null,
   workflowName varchar(125) not null,
   params text,

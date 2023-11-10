@@ -1,6 +1,7 @@
 package io.aston.api;
 
-import io.aston.model.Task;
+import io.aston.model.Event;
+import io.aston.model.EventStat;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.HttpRequest;
 import io.micronaut.http.HttpResponse;
@@ -18,29 +19,16 @@ import java.util.concurrent.CompletableFuture;
 public interface RuntimeApi {
 
     @Operation(tags = {"runtime"})
-    @Get("/runtime/queues/new-tasks")
+    @Get("/runtime/queues/events")
     @ApiResponse(content = @Content(schema = @Schema(ref = "Task")), description = "200 response")
     @ApiResponse(responseCode = "204", description = "204 empty response")
-    CompletableFuture<HttpResponse<Task>> queueNewTasks(
-            @QueryValue List<String> taskName,
+    CompletableFuture<HttpResponse<Event>> queue(
+            @QueryValue List<String> q,
             @QueryValue String workerId,
             @Nullable @QueryValue Long timeout,
             @Parameter(hidden = true) HttpRequest<?> request);
 
     @Operation(tags = {"runtime"})
-    @Get("/runtime/queues/finished-tasks")
-    @ApiResponse(content = @Content(schema = @Schema(ref = "Task")), description = "200 response")
-    @ApiResponse(responseCode = "204", description = "204 empty response")
-    CompletableFuture<HttpResponse<Task>> queueFinishedTasks(
-            @QueryValue String workerId,
-            @Nullable @QueryValue Long timeout,
-            @Parameter(hidden = true) HttpRequest<?> request);
-
-    @Operation(tags = {"runtime"})
-    @Get("/runtime/stat/tasks")
-    List<String> statTasks();
-
-    @Operation(tags = {"runtime"})
-    @Get("/runtime/stat/finished")
-    List<String> statFinished();
+    @Get("/runtime/stat/events")
+    List<EventStat> statEvents();
 }
