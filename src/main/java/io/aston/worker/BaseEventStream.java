@@ -35,7 +35,7 @@ public class BaseEventStream {
     }
 
     public void workerCall(Worker worker, long timeout) {
-        InternalEvent event = nextEvent(worker.getQuery());
+        InternalEvent event = nextEvent(worker.getQuery(), worker.getWorkerName());
         if (event != null) {
             sendEvent(worker.removeFuture(), event);
         } else {
@@ -52,12 +52,12 @@ public class BaseEventStream {
         return Arrays.binarySearch(query, eventName) >= 0 ? worker.copyAndRemoveFuture() : null;
     }
 
-    private InternalEvent nextEvent(String[] query) {
-        return eventStream.filterAndSearch((k, v) -> whereEvent(k, v, query));
+    private InternalEvent nextEvent(String[] query, String workerId) {
+        return eventStream.filterAndSearch((k, v) -> whereEvent(k, v, query, workerId));
     }
 
-    private InternalEvent whereEvent(String eventName, InternalEvent event, String[] query) {
-        return Arrays.binarySearch(query, eventName) >= 0 && callRunningState(event)
+    private InternalEvent whereEvent(String eventName, InternalEvent event, String[] query, String workerId) {
+        return Arrays.binarySearch(query, eventName) >= 0 && callRunningState(event, workerId)
                 ? event : null;
     }
 
@@ -80,7 +80,7 @@ public class BaseEventStream {
         });
     }
 
-    protected boolean callRunningState(InternalEvent event) {
+    protected boolean callRunningState(InternalEvent event, String workerId) {
         return true;
     }
 

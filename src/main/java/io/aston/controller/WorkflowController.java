@@ -117,6 +117,9 @@ public class WorkflowController implements WorkflowApi {
         workflow.setOutput(workflowFinish.getOutput());
         workflow.setState(workflowFinish.getState());
         workflow.setModified(Instant.now());
+        if (workflowFinish.getWorkerId() != null) {
+            workflow.setWorkerId(workflowFinish.getWorkerId());
+        }
         workflowDao.update(workflow);
         taskDao.updateWorkflowAll(workflow.getId(),
                 Multi.of(List.of(State.SCHEDULED, State.RUNNING)),

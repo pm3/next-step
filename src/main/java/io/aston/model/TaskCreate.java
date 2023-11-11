@@ -13,8 +13,6 @@ import java.util.Map;
 @Serdeable.Serializable
 public class TaskCreate {
     private String workflowId;
-    @Nullable
-    private String workerId;
     private String taskName;
     @Nullable
     @Format(JsonConverterFactory.JSON)
@@ -30,15 +28,7 @@ public class TaskCreate {
     public void setWorkflowId(String workflowId) {
         this.workflowId = workflowId;
     }
-
-    public String getWorkerId() {
-        return workerId;
-    }
-
-    public void setWorkerId(String workerId) {
-        this.workerId = workerId;
-    }
-
+    
     public String getTaskName() {
         return taskName;
     }

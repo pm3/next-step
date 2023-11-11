@@ -8,6 +8,7 @@ import com.aston.micronaut.sql.where.Multi;
 import io.aston.entity.TaskEntity;
 import io.aston.model.State;
 import io.aston.model.Task;
+import io.micronaut.core.annotation.Nullable;
 
 import java.time.Instant;
 import java.util.List;
@@ -30,7 +31,7 @@ public interface ITaskDao {
             output=:output,
             retries=:retries,
             modified=:modified,
-            workerId=:workerId
+            workerId=coalesce(:workerId,workerId)
             where id=:id
             """)
     void updateState(TaskEntity task);
@@ -39,10 +40,14 @@ public interface ITaskDao {
             update ns_task set
             state=:newState,
             output=:output,
-            modified=:modified
+            modified=:modified,
+            workerId=coalesce(:workerId,workerId)
             where id=:id and state=:oldState
             """)
-    int updateState(String id, State oldState, State newState, @Format(JsonConverterFactory.JSON) Object output, Instant modified);
+    int updateState(String id, State oldState, State newState,
+                    @Format(JsonConverterFactory.JSON) Object output,
+                    @Nullable String workerId,
+                    Instant modified);
 
     @Query("""
             update ns_task set

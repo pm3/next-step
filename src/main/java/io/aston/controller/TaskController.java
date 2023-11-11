@@ -54,16 +54,6 @@ public class TaskController implements TaskApi {
 
         WorkflowEntity workflow = workflowDao.loadById(taskCreate.getWorkflowId())
                 .orElseThrow(() -> new UserDataException("workflow not found"));
-
-        if (workflow.getState() == State.SCHEDULED) {
-            if (taskCreate.getWorkerId() == null) {
-                throw new UserDataException("start running workflow, workflow workerId is required");
-            }
-            workflow.setWorkerId(taskCreate.getWorkerId());
-            workflow.setState(State.RUNNING);
-            workflow.setModified(Instant.now());
-            workflowDao.updateState(workflow.getId(), workflow.getState(), workflow.getModified(), workflow.getWorkerId());
-        }
         if (workflow.getState() != State.RUNNING) {
             throw new UserDataException("only running workflow");
         }
@@ -99,7 +89,9 @@ public class TaskController implements TaskApi {
         task.setOutput(taskFinish.getOutput());
         task.setState(taskFinish.getState());
         task.setModified(Instant.now());
-        task.setWorkerId(taskFinish.getWorkerId());
+        if (taskFinish.getWorkerId() != null) {
+            task.setWorkerId(taskFinish.getWorkerId());
+        }
         if (task.getState() == State.RETRY) {
             task.setRetries(task.getRetries() + 1);
             if (task.getRetries() >= task.getMaxRetryCount()) {

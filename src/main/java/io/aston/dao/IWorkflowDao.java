@@ -24,8 +24,8 @@ public interface IWorkflowDao {
     @Query("""
             update ns_workflow set
             state=:state,
-            modified=:modified
-            /** ,workerId=:workerId */
+            modified=:modified,
+            workerId=coalesce(:workerId,workerId)
             where id=:id
             """)
     void updateState(String id, State state, Instant modified, String workerId);
