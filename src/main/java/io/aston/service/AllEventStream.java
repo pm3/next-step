@@ -80,38 +80,42 @@ public class AllEventStream extends BaseEventStream {
         }
         task.setState(State.RUNNING);
         task.setModified(now);
+        if (task.getRunningTimeout() > 0) {
+            timer.schedule(task.getRunningTimeout() * 1000L, task, this::callRunningExpireStateTask);
+        }
         return true;
     }
 
-    protected void callRunningExpireStateTask(TaskEntity task0) {
+    protected void callRunningExpireStateTask(TaskEntity task) {
         Instant now = Instant.now();
-        if (taskDao.updateState(task0.getId(), State.RUNNING, State.FAILED, Map.of("type", "timeout"), now) > 0) {
-            task0.setState(State.FAILED);
-            task0.setModified(now);
-            task0.setRetries(task0.getRetries() + 1);
-            if (handleFailedStateTask != null) {
-                handleFailedStateTask.accept(task0);
+        if (task.getRetries() + 1 < task.getMaxRetryCount()) {
+            if (taskDao.updateStateAndRetry(task.getId(), State.RUNNING, State.RETRY, now) > 0) {
+                task.setState(State.RETRY);
+                task.setOutput(Map.of("message", "timeout"));
+                task.setModified(now);
+                task.setRetries(task.getRetries() + 1);
+                runTask(task);
+            }
+        } else {
+            Map<String, String> errValue = Map.of("type", "retry", "message", "max retry");
+            if (taskDao.updateState(task.getId(), State.RUNNING, State.FAILED, errValue, now) > 0) {
+                task.setState(State.FAILED);
+                task.setModified(now);
+                task.setRetries(task.getRetries() + 1);
+                if (handleFailedStateTask != null) {
+                    handleFailedStateTask.accept(task);
+                }
             }
         }
     }
 
     private void callRetryReprocessTask(TaskEntity task) {
         Instant now = Instant.now();
-        if (taskDao.updateStateAndRetry(task.getId(), State.RETRY, State.SCHEDULED, now) > 0) {
+        if (taskDao.updateState(task.getId(), State.RETRY, State.SCHEDULED, null, now) > 0) {
             task.setState(State.SCHEDULED);
             task.setModified(now);
-            task.setRetries(task.getRetries() + 1);
-            add(new InternalEvent(EventType.NEW_TASK, task.getTaskName(), null, task, task.getRunningTimeout() * 1000L));
-        }
-        Map<String, String> errValue = Map.of("type", "retry", "message", "max retry");
-        if (taskDao.updateState(task.getId(), State.RETRY, State.FAILED, errValue, now) > 0) {
-            task.setState(State.FAILED);
-            task.setOutput(errValue);
-            task.setModified(now);
-            task.setRetries(task.getRetries() + 1);
-            if (handleFailedStateTask != null) {
-                handleFailedStateTask.accept(task);
-            }
+            task.setOutput(null);
+            runTask(task);
         }
     }
 

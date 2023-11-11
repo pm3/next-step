@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Controller("/v1")
@@ -72,9 +73,9 @@ public class TaskController implements TaskApi {
         newTask.setTaskName(taskCreate.getTaskName());
         newTask.setWorkflowName(workflow.getWorkflowName());
         newTask.setParams(taskCreate.getParams());
-        newTask.setState(taskCreate.getState() != null && State.in(taskCreate.getState(), State.COMPLETED, State.FAILED) ? taskCreate.getState() : State.SCHEDULED);
-        newTask.setCreated(taskCreate.getCreated() != null && taskCreate.getCreated().isAfter(workflow.getCreated()) && taskCreate.getCreated().isBefore(Instant.now()) ? taskCreate.getCreated() : Instant.now());
-        newTask.setModified(Instant.now());
+        newTask.setState(State.SCHEDULED);
+        newTask.setCreated(Instant.now());
+        newTask.setModified(newTask.getCreated());
         newTask.setRetries(0);
         newTask.setRunningTimeout(taskCreate.getRunningTimeout());
         newTask.setMaxRetryCount(taskCreate.getMaxRetryCount());
@@ -99,6 +100,14 @@ public class TaskController implements TaskApi {
         task.setState(taskFinish.getState());
         task.setModified(Instant.now());
         task.setWorkerId(taskFinish.getWorkerId());
+        if (task.getState() == State.RETRY) {
+            task.setRetries(task.getRetries() + 1);
+            if (task.getRetries() >= task.getMaxRetryCount()) {
+                task.setState(State.FAILED);
+                Map<String, String> errValue = Map.of("type", "retry", "message", "max retry");
+                task.setOutput(errValue);
+            }
+        }
         taskDao.updateState(task);
         fireTaskState(task, workflow);
         return eventStream.toTask(task);
@@ -123,7 +132,7 @@ public class TaskController implements TaskApi {
     }
 
     private void checkChangeState(TaskEntity task, State newState) {
-        if (!State.in(task.getState(), State.SCHEDULED, State.RUNNING, State.RETRY)) {
+        if (State.in(task.getState(), State.COMPLETED, State.FAILED)) {
             throw new UserDataException("no change closed task " + task.getState().name());
         }
         if (State.in(newState, State.SCHEDULED, State.RUNNING)) {

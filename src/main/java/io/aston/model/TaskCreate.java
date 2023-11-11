@@ -6,7 +6,6 @@ import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
 
-import java.time.Instant;
 import java.util.Map;
 
 @Introspected
@@ -20,13 +19,6 @@ public class TaskCreate {
     @Nullable
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
-    @Nullable
-    @Format(JsonConverterFactory.JSON)
-    private Object output;
-    @Nullable
-    private State state;
-    @Nullable
-    private Instant created;
     private int runningTimeout;
     private int maxRetryCount;
     private int retryWait;
@@ -61,30 +53,6 @@ public class TaskCreate {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
-    }
-
-    public Object getOutput() {
-        return output;
-    }
-
-    public void setOutput(Object output) {
-        this.output = output;
-    }
-
-    public State getState() {
-        return state;
-    }
-
-    public void setState(State state) {
-        this.state = state;
-    }
-
-    public Instant getCreated() {
-        return created;
-    }
-
-    public void setCreated(Instant created) {
-        this.created = created;
     }
 
     public int getRunningTimeout() {
