@@ -111,7 +111,7 @@ public class WorkflowController implements WorkflowApi {
         if (!State.in(workflow.getState(), State.RUNNING, State.SCHEDULED)) {
             throw new UserDataException("finish only running workflow");
         }
-        if (!State.in(workflowFinish.getState(), State.FAILED, State.FATAL_ERROR, State.COMPLETED)) {
+        if (!State.in(workflowFinish.getState(), State.FAILED, State.COMPLETED)) {
             throw new UserDataException("change to only closed state");
         }
         workflow.setOutput(workflowFinish.getOutput());

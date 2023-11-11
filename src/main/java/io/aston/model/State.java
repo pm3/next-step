@@ -6,8 +6,7 @@ public enum State {
     RETRY,
     AWAIT,
     COMPLETED,
-    FAILED,
-    FATAL_ERROR;
+    FAILED;
 
     public static boolean in(State s1, State... states) {
         for (State s2 : states) if (s1 == s2) return true;

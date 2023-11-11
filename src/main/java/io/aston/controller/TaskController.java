@@ -72,7 +72,7 @@ public class TaskController implements TaskApi {
         newTask.setTaskName(taskCreate.getTaskName());
         newTask.setWorkflowName(workflow.getWorkflowName());
         newTask.setParams(taskCreate.getParams());
-        newTask.setState(taskCreate.getState() != null && State.in(taskCreate.getState(), State.COMPLETED, State.FAILED, State.FATAL_ERROR) ? taskCreate.getState() : State.SCHEDULED);
+        newTask.setState(taskCreate.getState() != null && State.in(taskCreate.getState(), State.COMPLETED, State.FAILED) ? taskCreate.getState() : State.SCHEDULED);
         newTask.setCreated(taskCreate.getCreated() != null && taskCreate.getCreated().isAfter(workflow.getCreated()) && taskCreate.getCreated().isBefore(Instant.now()) ? taskCreate.getCreated() : Instant.now());
         newTask.setModified(Instant.now());
         newTask.setRetries(0);
@@ -117,8 +117,6 @@ public class TaskController implements TaskApi {
             case RETRY:
                 eventStream.runTask(task);
                 break;
-            case FATAL_ERROR:
-                workflowFatalError(workflow);
             case COMPLETED, FAILED:
                 eventStream.add(new InternalEvent(EventType.FINISHED_TASK, workflow.getWorkerId(), null, task, -1L));
         }
@@ -131,16 +129,5 @@ public class TaskController implements TaskApi {
         if (State.in(newState, State.SCHEDULED, State.RUNNING)) {
             throw new UserDataException("no change to open state - " + newState.name());
         }
-    }
-
-    private void workflowFatalError(WorkflowEntity workflow) {
-        workflow.setState(State.FATAL_ERROR);
-        workflow.setModified(Instant.now());
-        workflowDao.updateState(workflow.getId(), workflow.getState(), workflow.getModified(), null);
-        taskDao.updateWorkflowAll(workflow.getId(),
-                Multi.of(List.of(State.SCHEDULED, State.RUNNING)),
-                State.FAILED,
-                "workflow FATAL_ERROR",
-                workflow.getModified());
     }
 }
