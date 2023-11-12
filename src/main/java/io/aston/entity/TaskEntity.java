@@ -3,7 +3,6 @@ package io.aston.entity;
 import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.entity.Table;
-import io.aston.model.State;
 import io.micronaut.core.annotation.Nullable;
 
 import java.time.Instant;
@@ -55,7 +54,7 @@ public class TaskEntity {
     public void setWorkerId(String workerId) {
         this.workerId = workerId;
     }
-    
+
     public String getTaskName() {
         return taskName;
     }

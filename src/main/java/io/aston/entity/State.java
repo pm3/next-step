@@ -1,4 +1,4 @@
-package io.aston.model;
+package io.aston.entity;
 
 public enum State {
     SCHEDULED,

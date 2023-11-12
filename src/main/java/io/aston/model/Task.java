@@ -2,6 +2,7 @@ package io.aston.model;
 
 import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
+import io.aston.entity.State;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
@@ -56,7 +57,7 @@ public class Task {
     public void setWorkerId(String workerId) {
         this.workerId = workerId;
     }
-    
+
     public String getTaskName() {
         return taskName;
     }

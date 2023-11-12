@@ -6,6 +6,7 @@ import io.aston.dao.IMetaDao;
 import io.aston.dao.ITaskDao;
 import io.aston.dao.IWorkflowDao;
 import io.aston.entity.CronTemplateEntity;
+import io.aston.entity.State;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
 import io.aston.service.AllEventStream;

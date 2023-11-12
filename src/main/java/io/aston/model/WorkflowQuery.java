@@ -1,5 +1,6 @@
 package io.aston.model;
 
+import io.aston.entity.State;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.annotation.QueryValue;

@@ -5,8 +5,8 @@ import com.aston.micronaut.sql.aop.SqlApi;
 import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import com.aston.micronaut.sql.where.Multi;
+import io.aston.entity.State;
 import io.aston.entity.WorkflowEntity;
-import io.aston.model.State;
 import io.aston.model.Workflow;
 
 import java.time.Instant;

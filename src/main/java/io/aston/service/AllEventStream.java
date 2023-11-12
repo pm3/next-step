@@ -2,6 +2,7 @@ package io.aston.service;
 
 import io.aston.dao.ITaskDao;
 import io.aston.dao.IWorkflowDao;
+import io.aston.entity.State;
 import io.aston.entity.TaskEntity;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
