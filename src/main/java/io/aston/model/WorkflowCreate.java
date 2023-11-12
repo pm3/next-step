@@ -14,6 +14,8 @@ public class WorkflowCreate {
     private String uniqueCode;
     @Nullable
     private Map<String, Object> params;
+    int scheduledTimeout;
+    int runningTimeout;
 
     public String getName() {
         return name;
@@ -37,5 +39,23 @@ public class WorkflowCreate {
 
     public void setParams(Map<String, Object> params) {
         this.params = params;
+    }
+
+    public int getScheduledTimeout() {
+        return scheduledTimeout;
+    }
+
+    public WorkflowCreate setScheduledTimeout(int scheduledTimeout) {
+        this.scheduledTimeout = scheduledTimeout;
+        return this;
+    }
+
+    public int getRunningTimeout() {
+        return runningTimeout;
+    }
+
+    public WorkflowCreate setRunningTimeout(int runningTimeout) {
+        this.runningTimeout = runningTimeout;
+        return this;
     }
 }

@@ -2,6 +2,7 @@ package io.aston.model;
 
 import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
+import io.aston.entity.Timeout;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
@@ -17,9 +18,7 @@ public class TaskCreate {
     @Nullable
     @Format(JsonConverterFactory.JSON)
     private Map<String, Object> params;
-    private int runningTimeout;
-    private int maxRetryCount;
-    private int retryWait;
+    private Timeout timeout;
 
     public String getWorkflowId() {
         return workflowId;
@@ -28,7 +27,7 @@ public class TaskCreate {
     public void setWorkflowId(String workflowId) {
         this.workflowId = workflowId;
     }
-    
+
     public String getTaskName() {
         return taskName;
     }
@@ -45,27 +44,12 @@ public class TaskCreate {
         this.params = params;
     }
 
-    public int getRunningTimeout() {
-        return runningTimeout;
+    public Timeout getTimeout() {
+        return timeout;
     }
 
-    public void setRunningTimeout(int runningTimeout) {
-        this.runningTimeout = runningTimeout;
-    }
-
-    public int getMaxRetryCount() {
-        return maxRetryCount;
-    }
-
-    public void setMaxRetryCount(int maxRetryCount) {
-        this.maxRetryCount = maxRetryCount;
-    }
-
-    public int getRetryWait() {
-        return retryWait;
-    }
-
-    public void setRetryWait(int retryWait) {
-        this.retryWait = retryWait;
+    public TaskCreate setTimeout(Timeout timeout) {
+        this.timeout = timeout;
+        return this;
     }
 }

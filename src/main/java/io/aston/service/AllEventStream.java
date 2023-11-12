@@ -4,6 +4,7 @@ import io.aston.dao.ITaskDao;
 import io.aston.dao.IWorkflowDao;
 import io.aston.entity.State;
 import io.aston.entity.TaskEntity;
+import io.aston.entity.Timeout;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
 import io.aston.worker.BaseEventStream;
@@ -38,10 +39,19 @@ public class AllEventStream extends BaseEventStream {
     }
 
     public void runTask(TaskEntity task) {
+        if (task.getTimeout() == null) task.setTimeout(new Timeout());
         if (task.getState() == State.SCHEDULED) {
-            add(new InternalEvent(EventType.NEW_TASK, task.getTaskName(), null, task, task.getRunningTimeout() * 1000L));
+            add(new InternalEvent(EventType.NEW_TASK, task.getTaskName(), null, task, task.getTimeout().getRunningTimeout() * 1000L));
+            if (task.getTimeout().getScheduledTimeout() > 0) {
+                Date expire = new Date(Date.from(task.getModified()).getTime() + task.getTimeout().getScheduledTimeout() * 1000L);
+                if (expire.after(new Date())) {
+                    timer.schedule(expire, task, this::callScheduledExpireStateTask);
+                } else {
+                    callScheduledExpireStateTask(task);
+                }
+            }
         } else if (task.getState() == State.RUNNING) {
-            long timeout = task.getRunningTimeout();
+            long timeout = task.getTimeout().getRunningTimeout();
             if (timeout < 0) timeout = 0L;
             Date expire = new Date(Date.from(task.getModified()).getTime() + timeout * 1000);
             if (expire.after(new Date())) {
@@ -49,14 +59,40 @@ public class AllEventStream extends BaseEventStream {
             } else {
                 callRunningExpireStateTask(task);
             }
+        } else if (task.getState() == State.AWAIT) {
+            if (task.getTimeout().getAwaitTimeout() > 0) {
+                Date expire = new Date(Date.from(task.getModified()).getTime() + task.getTimeout().getAwaitTimeout() * 1000L);
+                if (expire.after(new Date())) {
+                    timer.schedule(expire, task, this::callAwaitExpireStateTask);
+                } else {
+                    callAwaitExpireStateTask(task);
+                }
+            }
         } else if (task.getState() == State.RETRY) {
-            long wait = task.getRetryWait();
+            long wait = task.getTimeout().getRetryWait();
+            if (task.getTimeout().getRetryWait() > 0 && task.getTimeout().getMaxRetryWait() > task.getTimeout().getRetryWait()) {
+                wait = task.getTimeout().getRetryWait() + (long) task.getRetries() * (task.getTimeout().getRetryWait() - task.getTimeout().getMaxRetryWait());
+            }
             if (wait < 0) wait = 0L;
             Date expire = new Date(Date.from(task.getModified()).getTime() + wait * 1000);
             if (expire.after(new Date())) {
                 timer.schedule(expire, task, this::callRetryReprocessTask);
             } else {
                 callRetryReprocessTask(task);
+            }
+        }
+    }
+
+    public void runWorkflow(WorkflowEntity workflow) {
+        if (workflow.getState() == State.SCHEDULED) {
+            add(new InternalEvent(EventType.NEW_WORKFLOW, workflow.getWorkflowName(), workflow, null, workflow.getRunningTimeout() * 1000L));
+            if (workflow.getScheduledTimeout() > 0) {
+                Date expire = new Date(Date.from(workflow.getModified()).getTime() + workflow.getScheduledTimeout() * 1000L);
+                if (expire.after(new Date())) {
+                    timer.schedule(expire, workflow, this::callScheduledExpireStateWorkflow);
+                } else {
+                    callScheduledExpireStateWorkflow(workflow);
+                }
             }
         }
     }
@@ -79,6 +115,16 @@ public class AllEventStream extends BaseEventStream {
         }
     }
 
+    private void callScheduledExpireStateTask(TaskEntity task) {
+        Instant now = Instant.now();
+        Map<String, String> errValue = Map.of("message", "scheduled_timeout");
+        if (taskDao.updateState(task.getId(), State.SCHEDULED, State.FAILED, errValue, null, now) > 0) {
+            task.setState(State.FAILED);
+            task.setModified(now);
+            task.setOutput(errValue);
+        }
+    }
+
     protected boolean callRunningStateTask(TaskEntity task, String workerId) {
         Instant now = Instant.now();
         if (taskDao.updateState(task.getId(), State.SCHEDULED, State.RUNNING, null, workerId, now) == 0) {
@@ -88,15 +134,15 @@ public class AllEventStream extends BaseEventStream {
         task.setState(State.RUNNING);
         task.setModified(now);
         task.setWorkerId(workerId);
-        if (task.getRunningTimeout() > 0) {
-            timer.schedule(task.getRunningTimeout() * 1000L, task, this::callRunningExpireStateTask);
+        if (task.getTimeout().getRunningTimeout() > 0) {
+            timer.schedule(task.getTimeout().getRunningTimeout() * 1000L, task, this::callRunningExpireStateTask);
         }
         return true;
     }
 
     protected void callRunningExpireStateTask(TaskEntity task) {
         Instant now = Instant.now();
-        if (task.getRetries() + 1 < task.getMaxRetryCount()) {
+        if (task.getRetries() + 1 < task.getTimeout().getMaxRetry()) {
             if (taskDao.updateStateAndRetry(task.getId(), State.RUNNING, State.RETRY, now) > 0) {
                 task.setState(State.RETRY);
                 task.setOutput(Map.of("message", "timeout"));
@@ -127,12 +173,45 @@ public class AllEventStream extends BaseEventStream {
         }
     }
 
+    private void callAwaitExpireStateTask(TaskEntity task) {
+        Instant now = Instant.now();
+        Map<String, String> errValue = Map.of("message", "await_timeout");
+        if (taskDao.updateState(task.getId(), State.AWAIT, State.FAILED, errValue, null, now) > 0) {
+            task.setState(State.FAILED);
+            task.setModified(now);
+            task.setOutput(errValue);
+        }
+    }
+
     private boolean callRunningStateWorkflow(WorkflowEntity workflow, String workerId) {
         workflow.setState(State.RUNNING);
         workflow.setModified(Instant.now());
         workflow.setWorkerId(workerId);
         workflowDao.updateState(workflow.getId(), workflow.getState(), workflow.getModified(), workflow.getWorkerId());
+        if (workflow.getRunningTimeout() > 0) {
+            timer.schedule(workflow.getRunningTimeout() * 1000L, workflow, this::callRunningExpireStateWorkflow);
+        }
         return true;
+    }
+
+    private void callScheduledExpireStateWorkflow(WorkflowEntity workflow) {
+        Instant now = Instant.now();
+        Map<String, String> errValue = Map.of("message", "scheduled_timeout");
+        if (workflowDao.updateState(workflow.getId(), State.SCHEDULED, State.FAILED, errValue, null, now) > 0) {
+            workflow.setState(State.FAILED);
+            workflow.setModified(now);
+            workflow.setOutput(errValue);
+        }
+    }
+
+    private void callRunningExpireStateWorkflow(WorkflowEntity workflow) {
+        Instant now = Instant.now();
+        Map<String, String> errValue = Map.of("message", "running_timeout");
+        if (workflowDao.updateState(workflow.getId(), State.RUNNING, State.FAILED, errValue, null, now) > 0) {
+            workflow.setState(State.FAILED);
+            workflow.setModified(now);
+            workflow.setOutput(errValue);
+        }
     }
 
     public List<EventStat> stat() {
@@ -157,8 +236,7 @@ public class AllEventStream extends BaseEventStream {
         t2.setCreated(task.getCreated());
         t2.setModified(task.getModified());
         t2.setRetries(task.getRetries());
-        t2.setRunningTimeout(task.getRunningTimeout());
-        t2.setMaxRetryCount(task.getMaxRetryCount());
+        t2.setTimeout(task.getTimeout());
         return t2;
     }
 

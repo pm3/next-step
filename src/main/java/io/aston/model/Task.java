@@ -3,6 +3,7 @@ package io.aston.model;
 import com.aston.micronaut.sql.convert.JsonConverterFactory;
 import com.aston.micronaut.sql.entity.Format;
 import io.aston.entity.State;
+import io.aston.entity.Timeout;
 import io.micronaut.core.annotation.Introspected;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.serde.annotation.Serdeable;
@@ -30,9 +31,7 @@ public class Task {
     private Instant created;
     private Instant modified;
     private int retries;
-    private int runningTimeout;
-    private int maxRetryCount;
-    private int retryWait;
+    @Nullable Timeout timeout;
 
     public String getId() {
         return id;
@@ -122,27 +121,12 @@ public class Task {
         this.retries = retries;
     }
 
-    public int getRunningTimeout() {
-        return runningTimeout;
+    public Timeout getTimeout() {
+        return timeout;
     }
 
-    public void setRunningTimeout(int runningTimeout) {
-        this.runningTimeout = runningTimeout;
-    }
-
-    public int getMaxRetryCount() {
-        return maxRetryCount;
-    }
-
-    public void setMaxRetryCount(int maxRetryCount) {
-        this.maxRetryCount = maxRetryCount;
-    }
-
-    public int getRetryWait() {
-        return retryWait;
-    }
-
-    public void setRetryWait(int retryWait) {
-        this.retryWait = retryWait;
+    public Task setTimeout(Timeout timeout) {
+        this.timeout = timeout;
+        return this;
     }
 }

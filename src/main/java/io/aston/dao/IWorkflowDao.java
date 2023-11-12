@@ -8,6 +8,7 @@ import com.aston.micronaut.sql.where.Multi;
 import io.aston.entity.State;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.Workflow;
+import io.micronaut.core.annotation.Nullable;
 
 import java.time.Instant;
 import java.util.List;
@@ -29,6 +30,19 @@ public interface IWorkflowDao {
             where id=:id
             """)
     void updateState(String id, State state, Instant modified, String workerId);
+
+    @Query("""
+            update ns_workflow set
+            state=:newState,
+            output=:output,
+            modified=:modified,
+            workerId=coalesce(:workerId,workerId)
+            where id=:id and state=:oldState
+            """)
+    int updateState(String id, State oldState, State newState,
+                    @Format(JsonConverterFactory.JSON) Object output,
+                    @Nullable String workerId,
+                    Instant modified);
 
     @Query("update ns_workflow set output=:output where id=:id")
     void updateOutput(String id, @Format(JsonConverterFactory.JSON) Object output);

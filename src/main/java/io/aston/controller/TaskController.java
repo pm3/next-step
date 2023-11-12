@@ -6,6 +6,7 @@ import io.aston.dao.ITaskDao;
 import io.aston.dao.IWorkflowDao;
 import io.aston.entity.State;
 import io.aston.entity.TaskEntity;
+import io.aston.entity.Timeout;
 import io.aston.entity.WorkflowEntity;
 import io.aston.model.*;
 import io.aston.service.AllEventStream;
@@ -68,8 +69,7 @@ public class TaskController implements TaskApi {
         newTask.setCreated(Instant.now());
         newTask.setModified(newTask.getCreated());
         newTask.setRetries(0);
-        newTask.setRunningTimeout(taskCreate.getRunningTimeout());
-        newTask.setMaxRetryCount(taskCreate.getMaxRetryCount());
+        newTask.setTimeout(taskCreate.getTimeout() != null ? taskCreate.getTimeout() : new Timeout());
         taskDao.insert(newTask);
         eventStream.runTask(newTask);
         return eventStream.toTask(newTask);
@@ -95,7 +95,7 @@ public class TaskController implements TaskApi {
         }
         if (task.getState() == State.RETRY) {
             task.setRetries(task.getRetries() + 1);
-            if (task.getRetries() >= task.getMaxRetryCount()) {
+            if (task.getRetries() >= task.getTimeout().getRunningTimeout()) {
                 task.setState(State.FAILED);
                 Map<String, String> errValue = Map.of("type", "retry", "message", "max retry");
                 task.setOutput(errValue);

@@ -25,6 +25,8 @@ public class WorkflowEntity {
     private Object output;
     @Nullable
     private String workerId;
+    int scheduledTimeout;
+    int runningTimeout;
 
     public String getId() {
         return id;
@@ -96,6 +98,24 @@ public class WorkflowEntity {
 
     public void setWorkerId(String workerId) {
         this.workerId = workerId;
+    }
+
+    public int getScheduledTimeout() {
+        return scheduledTimeout;
+    }
+
+    public WorkflowEntity setScheduledTimeout(int scheduledTimeout) {
+        this.scheduledTimeout = scheduledTimeout;
+        return this;
+    }
+
+    public int getRunningTimeout() {
+        return runningTimeout;
+    }
+
+    public WorkflowEntity setRunningTimeout(int runningTimeout) {
+        this.runningTimeout = runningTimeout;
+        return this;
     }
 
     @Override

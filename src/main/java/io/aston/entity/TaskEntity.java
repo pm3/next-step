@@ -27,9 +27,8 @@ public class TaskEntity {
     @Nullable
     private Instant modified;
     private int retries;
-    private int runningTimeout;
-    private int maxRetryCount;
-    private int retryWait;
+    @Nullable
+    private Timeout timeout;
 
     public String getId() {
         return id;
@@ -119,28 +118,13 @@ public class TaskEntity {
         this.retries = retries;
     }
 
-    public int getRunningTimeout() {
-        return runningTimeout;
+    public Timeout getTimeout() {
+        return timeout;
     }
 
-    public void setRunningTimeout(int runningTimeout) {
-        this.runningTimeout = runningTimeout;
-    }
-
-    public int getMaxRetryCount() {
-        return maxRetryCount;
-    }
-
-    public void setMaxRetryCount(int maxRetryCount) {
-        this.maxRetryCount = maxRetryCount;
-    }
-
-    public int getRetryWait() {
-        return retryWait;
-    }
-
-    public void setRetryWait(int retryWait) {
-        this.retryWait = retryWait;
+    public TaskEntity setTimeout(Timeout timeout) {
+        this.timeout = timeout;
+        return this;
     }
 
     @Override
